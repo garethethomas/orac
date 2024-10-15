@@ -273,8 +273,9 @@ module Ctrl_m
                                                    ! ReadDriver.F90
       integer                :: LUTIntSelm         ! LUT Interpolation flag,
                                                    ! See LUTIntMeth variables.
-      integer                :: RTMIntSelm         ! RTM Interpolation flag,
-                                                   ! See RTMIntMeth variables.
+      integer                :: RTMIntSelm         ! RTM interpolation flag,
+      integer                :: RTMIntSelmSW       ! RTM SW interpolation flag,
+                                                   ! ^See RTMIntMeth variables.
       integer                :: CloudType          ! Defines the homog/coreg
                                                    ! noise estimates used
       real                   :: Max_SDAD           ! Max # of pixels since
@@ -285,6 +286,8 @@ module Ctrl_m
       logical                :: process_aerosol_only
       logical                :: all_channels_same_view
       logical                :: use_ann_phase
+      logical                :: use_new_meas_error ! Enable or disable new LUT
+                                                   ! uncertainty characterisation
       integer                :: NTypes_to_process  ! # of valid values in above
       integer(byte)          :: Types_to_process(MaxTypes) ! Pavolonis (or other)
                                                    ! type codes for pixels to
@@ -326,6 +329,9 @@ module Ctrl_m
       integer                :: X(MaxStateVar,MaxIllum)  ! State vector elements
                                                          !   to be retrieved
       integer                :: XJ(MaxStateVar,MaxIllum) ! " included in Jacobian
+
+      ! A switch to enable boxcar averaging of the input radiances
+      integer                :: BoxCar
    end type Ctrl_t
 
 contains

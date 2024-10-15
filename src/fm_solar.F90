@@ -338,21 +338,21 @@ subroutine derivative_wrt_crp_parameter_brdf_0d(SPixel, i_p_crp, i_equation_form
    real :: Ref_over_l(SPixel%Ind%NSolar)
 
    if (i_equation_form == 1 .or. i_equation_form == 3) then
-if (USE_REVISED_REF_0D) then
-      e_l = d_CRP(:,IR_0d,i_p_crp) + &
-            ((d_CRP(:,IT_00,i_p_crp) * Rs2(:,IRho_0d) * Tbc_0 + &
+      if (USE_REVISED_REF_0D) then
+         e_l = d_CRP(:,IR_0d,i_p_crp) + &
+              ((d_CRP(:,IT_00,i_p_crp) * Rs2(:,IRho_0d) * Tbc_0 + &
               d_CRP(:,IT_0d,i_p_crp) * Rs2(:,IRho_dd) * Tbc_d) * c + &
-             b * d_CRP(:,IT_dd,i_p_crp) * Tbc_d) / a + &
-            (b * c * Rs2(:,IRho_DD) * d_CRP(:,IR_dd,i_p_crp) * Tbc_dd) / (a*a)
-else
-      e_l = d_CRP(:,IR_0d,i_p_crp) + &
-            (d_CRP(:,IT_00,i_p_crp) * Rs2(:,IRho_0V) * CRP(:,IT_vd) + &
-             CRP(:,IT_00) * Rs2(:,IRho_0V) * d_CRP(:,IT_vd,i_p_crp)) * Tbc_0v + &
-            ((d_CRP(:,IT_00,i_p_crp) * Rs2(:,IRho_0d) * Tbc_0 + &
+              b * d_CRP(:,IT_dd,i_p_crp) * Tbc_d) / a + &
+              (b * c * Rs2(:,IRho_DD) * d_CRP(:,IR_dd,i_p_crp) * Tbc_dd) / (a*a)
+      else
+         e_l = d_CRP(:,IR_0d,i_p_crp) + &
+              (d_CRP(:,IT_00,i_p_crp) * Rs2(:,IRho_0V) * CRP(:,IT_vd) + &
+              CRP(:,IT_00) * Rs2(:,IRho_0V) * d_CRP(:,IT_vd,i_p_crp)) * Tbc_0v + &
+              ((d_CRP(:,IT_00,i_p_crp) * Rs2(:,IRho_0d) * Tbc_0 + &
               d_CRP(:,IT_0d,i_p_crp) * Rs2(:,IRho_dd) * Tbc_d) * c + &
-             b * d_CRP(:,IT_dd,i_p_crp) * Tbc_d) / a + &
-            (b * c * Rs2(:,IRho_DD) * d_CRP(:,IR_dd,i_p_crp) * Tbc_dd) / (a*a)
-end if
+              b * d_CRP(:,IT_dd,i_p_crp) * Tbc_d) / a + &
+              (b * c * Rs2(:,IRho_DD) * d_CRP(:,IR_dd,i_p_crp) * Tbc_dd) / (a*a)
+      end if
    else
       write (*,*) 'ERROR: FM_Solar(), directional-diffuse reflectance not' // &
          ' supported with i_equation_form = ', i_equation_form
@@ -715,7 +715,8 @@ subroutine FM_Solar(Ctrl, SAD_LUT, SPixel, i_layer, RTM_Pc, RTM_Pc2, X, GZero, &
    if (present(d_Ref_dv)) d_Ref_dv = 0.
    if (present(d_Ref_dd)) d_Ref_dd = 0.
 
-   if (Ctrl%RTMIntSelm == RTMIntMethNone) then
+   if ( (Ctrl%RTMIntSelm == RTMIntMethNone) .or. &
+        (Ctrl%RTMIntSelmSW == RTMIntMethNone)) then
       ! Above/below cloud transmittances are 1 for infinite extent cloud/aerosol
       Tac_0  = 1.0
       Tac_v  = 1.0

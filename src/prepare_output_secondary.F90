@@ -45,6 +45,8 @@
 ! 2016/03/04, AP: Tidy prepare_*_packed_float. Make MissingXn the only value
 !    checked for in X, X0, Xb (sreal_fill_value had been ocassionally checked).
 ! 2016/07/27, GM: Add output fields for the multilayer retrieval.
+! 2023/10/10, GT: Added optional output of measurement uncertainties
+! 2024/07/03, GT: Added aerosol-layer height and surface-temperature variables.
 !
 ! Bugs:
 ! None known.
@@ -79,244 +81,279 @@ subroutine prepare_output_secondary(Ctrl, i, j, MSI_Data, SPixel, Diag, &
    output_data%scanline_u(i,j)=i
    output_data%scanline_v(i,j)=j
 
-if (Ctrl%Ind%flags%do_aerosol) then
-   !----------------------------------------------------------------------------
-   ! aot550_ap, aot550_fg
-   !----------------------------------------------------------------------------
-   dummyreal = 10.0**SPixel%Xb(ITau)
-   call prepare_short_packed_float( &
-        dummyreal, output_data%aot550_ap(i,j), &
-        output_data%aot550_ap_scale, output_data%aot550_ap_offset, &
-        output_data%aot550_ap_vmin, output_data%aot550_ap_vmax, &
-        MissingXn, output_data%aot550_ap_vmax, &
-        control=SPixel%Xb(ITau))
+   if (Ctrl%Ind%flags%do_aerosol) then
+      !-------------------------------------------------------------------------
+      ! aot550_ap, aot550_fg
+      !-------------------------------------------------------------------------
+      dummyreal = 10.0**SPixel%Xb(ITau)
+      call prepare_short_packed_float( &
+           dummyreal, output_data%aot550_ap(i,j), &
+           output_data%aot550_ap_scale, output_data%aot550_ap_offset, &
+           output_data%aot550_ap_vmin, output_data%aot550_ap_vmax, &
+           MissingXn, output_data%aot550_ap_vmax, &
+           control=SPixel%Xb(ITau))
+      
+      dummyreal = 10.0**SPixel%X0(ITau)
+      call prepare_short_packed_float( &
+           dummyreal, output_data%aot550_fg(i,j), &
+           output_data%aot550_fg_scale, output_data%aot550_fg_offset, &
+           output_data%aot550_fg_vmin, output_data%aot550_fg_vmax, &
+           MissingXn, output_data%aot550_fg_vmax, &
+           control=SPixel%X0(ITau))
+      
+      !-------------------------------------------------------------------------
+      ! aer_ap, aer_fg
+      !-------------------------------------------------------------------------
+      dummyreal = 10.0**SPixel%Xb(IRe)
+      call prepare_short_packed_float( &
+           dummyreal, output_data%aer_ap(i,j), &
+           output_data%aer_ap_scale, output_data%aer_ap_offset, &
+           output_data%aer_ap_vmin, output_data%aer_ap_vmax, &
+           MissingXn, output_data%aer_ap_vmax, &
+           control=SPixel%Xb(IRe))
 
-   dummyreal = 10.0**SPixel%X0(ITau)
-   call prepare_short_packed_float( &
-        dummyreal, output_data%aot550_fg(i,j), &
-        output_data%aot550_fg_scale, output_data%aot550_fg_offset, &
-        output_data%aot550_fg_vmin, output_data%aot550_fg_vmax, &
-        MissingXn, output_data%aot550_fg_vmax, &
-        control=SPixel%X0(ITau))
+      dummyreal = 10.0**SPixel%X0(IRe)
+      call prepare_short_packed_float( &
+           dummyreal, output_data%aer_fg(i,j), &
+           output_data%aer_fg_scale, output_data%aer_fg_offset, &
+           output_data%aer_fg_vmin, output_data%aer_fg_vmax, &
+           MissingXn, output_data%aer_fg_vmax, &
+           control=SPixel%X0(IRe))
 
-   !----------------------------------------------------------------------------
-   ! aer_ap, aer_fg
-   !----------------------------------------------------------------------------
-   dummyreal = 10.0**SPixel%Xb(IRe)
-   call prepare_short_packed_float( &
-        dummyreal, output_data%aer_ap(i,j), &
-        output_data%aer_ap_scale, output_data%aer_ap_offset, &
-        output_data%aer_ap_vmin, output_data%aer_ap_vmax, &
-        MissingXn, output_data%aer_ap_vmax, &
-        control=SPixel%Xb(IRe))
+      if (Ctrl%Ind%NThermal .ge. 2) then
+         !-------------------------------------------------------------------------
+         ! alp_ap, alp_fg
+         !-------------------------------------------------------------------------
+         call prepare_short_packed_float( &
+              SPixel%Xb(IPc), output_data%alp_ap(i,j), &
+              output_data%alp_scale, output_data%alp_offset, &
+              output_data%alp_vmin, output_data%alp_vmax, &
+              MissingXn, output_data%alp_vmax)
 
-   dummyreal = 10.0**SPixel%X0(IRe)
-   call prepare_short_packed_float( &
-        dummyreal, output_data%aer_fg(i,j), &
-        output_data%aer_fg_scale, output_data%aer_fg_offset, &
-        output_data%aer_fg_vmin, output_data%aer_fg_vmax, &
-        MissingXn, output_data%aer_fg_vmax, &
-        control=SPixel%X0(IRe))
-end if
+         call prepare_short_packed_float( &
+              SPixel%X0(IPc), output_data%alp_fg(i,j), &
+              output_data%alp_scale, output_data%alp_offset, &
+              output_data%alp_vmin, output_data%alp_vmax, &
+              MissingXn, output_data%alp_vmax)
+      end if
+   end if
 
-if (Ctrl%Ind%flags%do_rho) then
-   !----------------------------------------------------------------------------
-   ! rho_ap, rho_fg
-   !----------------------------------------------------------------------------
-   i_rho = 0
-   do k=1,SPixel%Ind%NSolar
-      kk = SPixel%spixel_y_solar_to_ctrl_y_solar_index(k)
+   if (Ctrl%Ind%NThermal .ge. 2) then
+      !-------------------------------------------------------------------------
+      ! stemp_ap, stemp_fg
+      !-------------------------------------------------------------------------
+      call prepare_short_packed_float( &
+           SPixel%Xb(ITs), output_data%stemp_ap(i,j), &
+           output_data%stemp_ap_scale, output_data%stemp_ap_offset, &
+           output_data%stemp_ap_vmin, output_data%stemp_ap_vmax, &
+           MissingXn, output_data%stemp_ap_vmax)
 
-      do l=1,MaxRho_XX
-         if (Ctrl%Ind%rho_terms(kk,l)) then
+      call prepare_short_packed_float( &
+           SPixel%X0(ITs), output_data%stemp_fg(i,j), &
+           output_data%stemp_fg_scale, output_data%stemp_fg_offset, &
+           output_data%stemp_fg_vmin, output_data%stemp_fg_vmax, &
+           MissingXn, output_data%stemp_fg_vmax)
+
+   end if
+
+   if (Ctrl%Ind%flags%do_rho) then
+      !----------------------------------------------------------------------------
+      ! rho_ap, rho_fg
+      !----------------------------------------------------------------------------
+      i_rho = 0
+      do k=1,SPixel%Ind%NSolar
+         kk = SPixel%spixel_y_solar_to_ctrl_y_solar_index(k)
+         
+         do l=1,MaxRho_XX
+            if (Ctrl%Ind%rho_terms(kk,l)) then
+               i_rho = i_rho + 1
+               
+               call prepare_short_packed_float( &
+                    SPixel%Xb(IRs(kk,l)), output_data%rho_ap(i,j,i_rho), &
+                    output_data%rho_ap_scale, output_data%rho_ap_offset, &
+                    output_data%rho_ap_vmin, output_data%rho_ap_vmax, &
+                    MissingXn, sint_fill_value)
+               
+               call prepare_short_packed_float( &
+                    SPixel%X0(IRs(kk,l)), output_data%rho_fg(i,j,i_rho), &
+                    output_data%rho_fg_scale, output_data%rho_fg_offset, &
+                    output_data%rho_fg_vmin, output_data%rho_fg_vmax, &
+                    MissingXn, sint_fill_value)
+            end if
+         end do
+      end do
+   end if
+   
+   if (Ctrl%Ind%flags%do_swansea) then
+      !----------------------------------------------------------------------------
+      ! swansea_s_ap, swansea_s_fg
+      !----------------------------------------------------------------------------
+      i_rho = 0
+      do k=1,SPixel%Ind%NSolar
+         kk = SPixel%spixel_y_solar_to_ctrl_y_solar_index(k)
+         
+         if (Ctrl%Ind%ss_terms(kk)) then
             i_rho = i_rho + 1
-
+            
             call prepare_short_packed_float( &
-                 SPixel%Xb(IRs(kk,l)), output_data%rho_ap(i,j,i_rho), &
-                 output_data%rho_ap_scale, output_data%rho_ap_offset, &
-                 output_data%rho_ap_vmin, output_data%rho_ap_vmax, &
-                 MissingXn, sint_fill_value)
-
+                 SPixel%Xb(ISS(kk)), output_data%swansea_s_ap(i,j,i_rho), &
+                 output_data%swansea_s_ap_scale, output_data%swansea_s_ap_offset, &
+                 output_data%swansea_s_ap_vmin, output_data%swansea_s_ap_vmax, &
+                 MissingXn, output_data%swansea_s_ap_vmax)
+            
             call prepare_short_packed_float( &
-                 SPixel%X0(IRs(kk,l)), output_data%rho_fg(i,j,i_rho), &
-                 output_data%rho_fg_scale, output_data%rho_fg_offset, &
-                 output_data%rho_fg_vmin, output_data%rho_fg_vmax, &
-                 MissingXn, sint_fill_value)
+                 SPixel%X0(ISS(kk)), output_data%swansea_s_fg(i,j,i_rho), &
+                 output_data%swansea_s_fg_scale, output_data%swansea_s_fg_offset, &
+                 output_data%swansea_s_fg_vmin, output_data%swansea_s_fg_vmax, &
+                 MissingXn, output_data%swansea_s_fg_vmax)
          end if
       end do
-   end do
-end if
-
-if (Ctrl%Ind%flags%do_swansea) then
-   !----------------------------------------------------------------------------
-   ! swansea_s_ap, swansea_s_fg
-   !----------------------------------------------------------------------------
-   i_rho = 0
-   do k=1,SPixel%Ind%NSolar
-      kk = SPixel%spixel_y_solar_to_ctrl_y_solar_index(k)
-
-      if (Ctrl%Ind%ss_terms(kk)) then
-         i_rho = i_rho + 1
-
-         call prepare_short_packed_float( &
-              SPixel%Xb(ISS(kk)), output_data%swansea_s_ap(i,j,i_rho), &
-              output_data%swansea_s_ap_scale, output_data%swansea_s_ap_offset, &
-              output_data%swansea_s_ap_vmin, output_data%swansea_s_ap_vmax, &
-              MissingXn, output_data%swansea_s_ap_vmax)
-
-         call prepare_short_packed_float( &
-              SPixel%X0(ISS(kk)), output_data%swansea_s_fg(i,j,i_rho), &
-              output_data%swansea_s_fg_scale, output_data%swansea_s_fg_offset, &
-              output_data%swansea_s_fg_vmin, output_data%swansea_s_fg_vmax, &
-              MissingXn, output_data%swansea_s_fg_vmax)
-      end if
-   end do
-
-   do k=1,Ctrl%Ind%NViews
-      if (any(SPixel%X .eq. ISP(k))) then
-         call prepare_short_packed_float( &
-              SPixel%Xb(ISP(k)), output_data%swansea_p_ap(i,j,k), &
-              output_data%swansea_p_ap_scale, output_data%swansea_p_ap_offset, &
-              output_data%swansea_p_ap_vmin, output_data%swansea_p_ap_vmax, &
-              MissingXn, output_data%swansea_p_ap_vmax)
-
-         call prepare_short_packed_float( &
-              SPixel%X0(ISP(k)), output_data%swansea_p_fg(i,j,k), &
-              output_data%swansea_p_fg_scale, output_data%swansea_p_fg_offset, &
-              output_data%swansea_p_fg_vmin, output_data%swansea_p_fg_vmax, &
-              MissingXn, output_data%swansea_p_fg_vmax)
-      end if
-   end do
-end if
-
-if (Ctrl%Ind%flags%do_cloud) then
-   !----------------------------------------------------------------------------
-   ! cot_ap, cot_fg
-   !----------------------------------------------------------------------------
-   dummyreal = 10.0**SPixel%Xb(ITau)
-   call prepare_short_packed_float( &
-        dummyreal, output_data%cot_ap(i,j), &
-        output_data%cot_ap_scale, output_data%cot_ap_offset, &
-        output_data%cot_ap_vmin, output_data%cot_ap_vmax, &
-        MissingXn, output_data%cot_ap_vmax, &
-        control=SPixel%Xb(ITau))
-
-   dummyreal = 10.0**SPixel%X0(ITau)
-   call prepare_short_packed_float( &
-        dummyreal, output_data%cot_fg(i,j), &
-        output_data%cot_fg_scale, output_data%cot_fg_offset, &
-        output_data%cot_fg_vmin, output_data%cot_fg_vmax, &
-        MissingXn, output_data%cot_fg_vmax, &
-        control=SPixel%X0(ITau))
-
-   !----------------------------------------------------------------------------
-   ! cer_ap, cer_fg
-   !----------------------------------------------------------------------------
-   call prepare_short_packed_float( &
-        SPixel%Xb(IRe), output_data%cer_ap(i,j), &
-        output_data%cer_ap_scale, output_data%cer_ap_offset, &
-        output_data%cer_ap_vmin, output_data%cer_ap_vmax, &
-        MissingXn, output_data%cer_ap_vmax)
-
-   call prepare_short_packed_float( &
-        SPixel%X0(IRe), output_data%cer_fg(i,j), &
-        output_data%cer_fg_scale, output_data%cer_fg_offset, &
-        output_data%cer_fg_vmin, output_data%cer_fg_vmax, &
-        MissingXn, output_data%cer_fg_vmax)
-
-   !----------------------------------------------------------------------------
-   ! ctp_ap, ctp_fg
-   !----------------------------------------------------------------------------
-   call prepare_short_packed_float( &
-        SPixel%Xb(IPc), output_data%ctp_ap(i,j), &
-        output_data%ctp_ap_scale, output_data%ctp_ap_offset, &
-        output_data%ctp_ap_vmin, output_data%ctp_ap_vmax, &
-        MissingXn, output_data%ctp_ap_vmax)
-
-   call prepare_short_packed_float( &
-        SPixel%X0(IPc), output_data%ctp_fg(i,j), &
-        output_data%ctp_fg_scale, output_data%ctp_fg_offset, &
-        output_data%ctp_fg_vmin, output_data%ctp_fg_vmax, &
-        MissingXn, output_data%ctp_fg_vmax)
-
-   !----------------------------------------------------------------------------
-   ! stemp_ap, stemp_fg
-   !----------------------------------------------------------------------------
-   call prepare_short_packed_float( &
-        SPixel%X0(ITs), output_data%stemp_ap(i,j), &
-        output_data%stemp_ap_scale, output_data%stemp_ap_offset, &
-        output_data%stemp_ap_vmin, output_data%stemp_ap_vmax, &
-        MissingXn, output_data%stemp_ap_vmax)
-
-   call prepare_short_packed_float( &
-        SPixel%X0(ITs), output_data%stemp_fg(i,j), &
-        output_data%stemp_fg_scale, output_data%stemp_fg_offset, &
-        output_data%stemp_fg_vmin, output_data%stemp_fg_vmax, &
-        MissingXn, output_data%stemp_fg_vmax)
-
-   !----------------------------------------------------------------------------
-   ! albedo
-   !----------------------------------------------------------------------------
-   do k=1,Ctrl%Ind%NSolar
+      
+      do k=1,Ctrl%Ind%NViews
+         if (any(SPixel%X .eq. ISP(k))) then
+            call prepare_short_packed_float( &
+                 SPixel%Xb(ISP(k)), output_data%swansea_p_ap(i,j,k), &
+                 output_data%swansea_p_ap_scale, output_data%swansea_p_ap_offset, &
+                 output_data%swansea_p_ap_vmin, output_data%swansea_p_ap_vmax, &
+                 MissingXn, output_data%swansea_p_ap_vmax)
+            
+            call prepare_short_packed_float( &
+                 SPixel%X0(ISP(k)), output_data%swansea_p_fg(i,j,k), &
+                 output_data%swansea_p_fg_scale, output_data%swansea_p_fg_offset, &
+                 output_data%swansea_p_fg_vmin, output_data%swansea_p_fg_vmax, &
+                 MissingXn, output_data%swansea_p_fg_vmax)
+         end if
+      end do
+   end if
+   
+   if (Ctrl%Ind%flags%do_cloud) then
+      !----------------------------------------------------------------------------
+      ! cot_ap, cot_fg
+      !----------------------------------------------------------------------------
+      dummyreal = 10.0**SPixel%Xb(ITau)
       call prepare_short_packed_float( &
-           MSI_Data%ALB(SPixel%Loc%X0,SPixel%Loc%Y0,k), &
-           output_data%albedo(i,j,k), &
-           output_data%albedo_scale, output_data%albedo_offset, &
-           output_data%albedo_vmin, output_data%albedo_vmax, &
-           sreal_fill_value, sint_fill_value)
-   end do
-end if
+           dummyreal, output_data%cot_ap(i,j), &
+           output_data%cot_ap_scale, output_data%cot_ap_offset, &
+           output_data%cot_ap_vmin, output_data%cot_ap_vmax, &
+           MissingXn, output_data%cot_ap_vmax, &
+           control=SPixel%Xb(ITau))
+      
+      dummyreal = 10.0**SPixel%X0(ITau)
+      call prepare_short_packed_float( &
+           dummyreal, output_data%cot_fg(i,j), &
+           output_data%cot_fg_scale, output_data%cot_fg_offset, &
+           output_data%cot_fg_vmin, output_data%cot_fg_vmax, &
+           MissingXn, output_data%cot_fg_vmax, &
+           control=SPixel%X0(ITau))
+      
+      !----------------------------------------------------------------------------
+      ! cer_ap, cer_fg
+      !----------------------------------------------------------------------------
+      call prepare_short_packed_float( &
+           SPixel%Xb(IRe), output_data%cer_ap(i,j), &
+           output_data%cer_ap_scale, output_data%cer_ap_offset, &
+           output_data%cer_ap_vmin, output_data%cer_ap_vmax, &
+           MissingXn, output_data%cer_ap_vmax)
+      
+      call prepare_short_packed_float( &
+           SPixel%X0(IRe), output_data%cer_fg(i,j), &
+           output_data%cer_fg_scale, output_data%cer_fg_offset, &
+           output_data%cer_fg_vmin, output_data%cer_fg_vmax, &
+           MissingXn, output_data%cer_fg_vmax)
+      
+      !----------------------------------------------------------------------------
+      ! ctp_ap, ctp_fg
+      !----------------------------------------------------------------------------
+      call prepare_short_packed_float( &
+           SPixel%Xb(IPc), output_data%ctp_ap(i,j), &
+           output_data%ctp_ap_scale, output_data%ctp_ap_offset, &
+           output_data%ctp_ap_vmin, output_data%ctp_ap_vmax, &
+           MissingXn, output_data%ctp_ap_vmax)
+      
+      call prepare_short_packed_float( &
+           SPixel%X0(IPc), output_data%ctp_fg(i,j), &
+           output_data%ctp_fg_scale, output_data%ctp_fg_offset, &
+           output_data%ctp_fg_vmin, output_data%ctp_fg_vmax, &
+           MissingXn, output_data%ctp_fg_vmax)
 
-if (Ctrl%Ind%flags%do_cloud_layer_2) then
-   !----------------------------------------------------------------------------
-   ! cot2_ap, cot2_fg
-   !----------------------------------------------------------------------------
-   dummyreal = 10.0**SPixel%Xb(ITau2)
-   call prepare_short_packed_float( &
-        dummyreal, output_data%cot2_ap(i,j), &
-        output_data%cot_ap_scale, output_data%cot_ap_offset, &
-        output_data%cot_ap_vmin, output_data%cot_ap_vmax, &
-        MissingXn, output_data%cot_ap_vmax, &
-        control=SPixel%Xb(ITau2))
+      !----------------------------------------------------------------------------
+      ! stemp_ap, stemp_fg
+      !----------------------------------------------------------------------------
+      call prepare_short_packed_float( &
+           SPixel%X0(ITs), output_data%stemp_ap(i,j), &
+           output_data%stemp_ap_scale, output_data%stemp_ap_offset, &
+           output_data%stemp_ap_vmin, output_data%stemp_ap_vmax, &
+           MissingXn, output_data%stemp_ap_vmax)
+      
+      call prepare_short_packed_float( &
+           SPixel%X0(ITs), output_data%stemp_fg(i,j), &
+           output_data%stemp_fg_scale, output_data%stemp_fg_offset, &
+           output_data%stemp_fg_vmin, output_data%stemp_fg_vmax, &
+           MissingXn, output_data%stemp_fg_vmax)
+      
+      !----------------------------------------------------------------------------
+      ! albedo
+      !----------------------------------------------------------------------------
+      do k=1,Ctrl%Ind%NSolar
+         call prepare_short_packed_float( &
+              MSI_Data%ALB(SPixel%Loc%X0,SPixel%Loc%Y0,k), &
+              output_data%albedo(i,j,k), &
+              output_data%albedo_scale, output_data%albedo_offset, &
+              output_data%albedo_vmin, output_data%albedo_vmax, &
+              sreal_fill_value, sint_fill_value)
+      end do
+   end if
+  
+   if (Ctrl%Ind%flags%do_cloud_layer_2) then
+      !----------------------------------------------------------------------------
+      ! cot2_ap, cot2_fg
+      !----------------------------------------------------------------------------
+      dummyreal = 10.0**SPixel%Xb(ITau2)
+      call prepare_short_packed_float( &
+           dummyreal, output_data%cot2_ap(i,j), &
+           output_data%cot_ap_scale, output_data%cot_ap_offset, &
+           output_data%cot_ap_vmin, output_data%cot_ap_vmax, &
+           MissingXn, output_data%cot_ap_vmax, &
+           control=SPixel%Xb(ITau2))
+      
+      dummyreal = 10.0**SPixel%X0(ITau2)
+      call prepare_short_packed_float( &
+           dummyreal, output_data%cot2_fg(i,j), &
+           output_data%cot_fg_scale, output_data%cot_fg_offset, &
+           output_data%cot_fg_vmin, output_data%cot_fg_vmax, &
+           MissingXn, output_data%cot_fg_vmax, &
+           control=SPixel%X0(ITau2))
 
-   dummyreal = 10.0**SPixel%X0(ITau2)
-   call prepare_short_packed_float( &
-        dummyreal, output_data%cot2_fg(i,j), &
-        output_data%cot_fg_scale, output_data%cot_fg_offset, &
-        output_data%cot_fg_vmin, output_data%cot_fg_vmax, &
-        MissingXn, output_data%cot_fg_vmax, &
-        control=SPixel%X0(ITau2))
-
-   !----------------------------------------------------------------------------
-   ! cer2_ap, cer2_fg
-   !----------------------------------------------------------------------------
-   call prepare_short_packed_float( &
-        SPixel%Xb(IRe2), output_data%cer2_ap(i,j), &
-        output_data%cer_ap_scale, output_data%cer_ap_offset, &
-        output_data%cer_ap_vmin, output_data%cer_ap_vmax, &
-        MissingXn, output_data%cer_ap_vmax)
-
-   call prepare_short_packed_float( &
-        SPixel%X0(IRe2), output_data%cer2_fg(i,j), &
-        output_data%cer_fg_scale, output_data%cer_fg_offset, &
-        output_data%cer_fg_vmin, output_data%cer_fg_vmax, &
-        MissingXn, output_data%cer_fg_vmax)
-
-   !----------------------------------------------------------------------------
-   ! ctp2_ap, ctp2_fg
-   !----------------------------------------------------------------------------
-   call prepare_short_packed_float( &
-        SPixel%Xb(IPc2), output_data%ctp2_ap(i,j), &
-        output_data%ctp_ap_scale, output_data%ctp_ap_offset, &
-        output_data%ctp_ap_vmin, output_data%ctp_ap_vmax, &
-        MissingXn, output_data%ctp_ap_vmax)
-
-   call prepare_short_packed_float( &
-        SPixel%X0(IPc2), output_data%ctp2_fg(i,j), &
-        output_data%ctp_fg_scale, output_data%ctp_fg_offset, &
-        output_data%ctp_fg_vmin, output_data%ctp_fg_vmax, &
-        MissingXn, output_data%ctp_fg_vmax)
-end if
+      !----------------------------------------------------------------------------
+      ! cer2_ap, cer2_fg
+      !----------------------------------------------------------------------------
+      call prepare_short_packed_float( &
+           SPixel%Xb(IRe2), output_data%cer2_ap(i,j), &
+           output_data%cer_ap_scale, output_data%cer_ap_offset, &
+           output_data%cer_ap_vmin, output_data%cer_ap_vmax, &
+           MissingXn, output_data%cer_ap_vmax)
+      
+      call prepare_short_packed_float( &
+           SPixel%X0(IRe2), output_data%cer2_fg(i,j), &
+           output_data%cer_fg_scale, output_data%cer_fg_offset, &
+           output_data%cer_fg_vmin, output_data%cer_fg_vmax, &
+           MissingXn, output_data%cer_fg_vmax)
+      
+      !----------------------------------------------------------------------------
+      ! ctp2_ap, ctp2_fg
+      !----------------------------------------------------------------------------
+      call prepare_short_packed_float( &
+           SPixel%Xb(IPc2), output_data%ctp2_ap(i,j), &
+           output_data%ctp_ap_scale, output_data%ctp_ap_offset, &
+           output_data%ctp_ap_vmin, output_data%ctp_ap_vmax, &
+           MissingXn, output_data%ctp_ap_vmax)
+      
+      call prepare_short_packed_float( &
+           SPixel%X0(IPc2), output_data%ctp2_fg(i,j), &
+           output_data%ctp_fg_scale, output_data%ctp_fg_offset, &
+           output_data%ctp_fg_vmin, output_data%ctp_fg_vmax, &
+           MissingXn, output_data%ctp_fg_vmax)
+   end if
 
    !----------------------------------------------------------------------------
    ! channels
@@ -329,6 +366,47 @@ end if
            output_data%channels_vmin(k), output_data%channels_vmax(k), &
            sreal_fill_value, sint_fill_value)
    end do
+
+   !----------------------------------------------------------------------------
+   ! Measurement error (diagonals)
+   !----------------------------------------------------------------------------
+   if (Ctrl%Ind%flags%do_meas_error) then
+      ! Check if a valid Sy is available for output.
+      ! This is a little messy, because of the way SPixel%Sy is allocated and
+      ! deallocated for each SPixel. We need to check:
+      ! * If we have a measurement count (Ny) - this is reset for each pixel,
+      !   and can be zero if the spixel is skipped early on.
+      ! * If Sy array has actually been defined - as Sy is deallocated and
+      !   then reallocated for each pixel, it is possible that, if the first
+      !   pixel is skipped _after_ Ny has been defined, Sy will not be
+      !   allocated.
+      ! * If the Sy array has the correct dimension. If we have missing
+      !   channels and skipped pixels, it is also possible at Ny ends up
+      !   being larger than Sy, at this point in the code!
+      !if (SPixel%Ind%Ny .gt. 1) then
+      !   write(*,*) SPixel%Ind%Ny, size(SPixel%Sy), SPixel%Ind%Ny*SPixel%Ind%Ny
+      !end if
+      if (SPixel%Ind%Ny .gt. 1 .and. size(SPixel%Sy) .gt. 1 .and. &
+           SPixel%Ind%Ny*SPixel%Ind%Ny .le. size(SPixel%Sy)) then
+         do k=1,SPixel%Ind%Ny
+            !write(*,"(e9.2)", advance="no") sqrt(SPixel%Sy(k,k))
+            call prepare_short_packed_float( &
+                 sqrt(SPixel%Sy(k,k)), output_data%Sy(i,j,k), &
+                 output_data%Sy_scale(k), output_data%Sy_offset(k), &
+                 output_data%Sy_vmin(k), output_data%Sy_vmax(k), &
+                 sreal_fill_value, sint_fill_value)
+         end do
+         !write(*,*) '.'
+      else
+         do k=1,SPixel%Ind%Ny
+            call prepare_short_packed_float( &
+                 sreal_fill_value, output_data%Sy(i,j,k), &
+                 output_data%Sy_scale(k), output_data%Sy_offset(k), &
+                 output_data%Sy_vmin(k), output_data%Sy_vmax(k), &
+                 sreal_fill_value, sint_fill_value)
+         end do
+      end if
+   end if
 
    !----------------------------------------------------------------------------
    ! y0
@@ -379,15 +457,15 @@ end if
    !----------------------------------------------------------------------------
    ! covariance
    !----------------------------------------------------------------------------
-if (Ctrl%Ind%flags%do_covariance) then
-   do k=1,SPixel%Nx
-      do l=1,SPixel%Nx
-        call prepare_float_packed_float( &
-             real(SPixel%Sn(k,l),kind=sreal), output_data%covariance(i,j,k,l), &
-             1._sreal, 0._sreal, 0._sreal, huge(dummyreal), &
-             sreal_fill_value, sreal_fill_value)
+   if (Ctrl%Ind%flags%do_covariance) then
+      do k=1,SPixel%Nx
+         do l=1,SPixel%Nx
+            call prepare_float_packed_float( &
+                 real(SPixel%Sn(k,l),kind=sreal), output_data%covariance(i,j,k,l), &
+                 1._sreal, 0._sreal, 0._sreal, huge(dummyreal), &
+                 sreal_fill_value, sreal_fill_value)
+         end do
       end do
-   end do
-end if
+   end if
 
 end subroutine prepare_output_secondary

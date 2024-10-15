@@ -117,13 +117,13 @@ subroutine compute_time(ncid, imager_time, ny)
    if (ierr.ne.NF90_NOERR) then
       write(*,*) 'ERROR: read_agri_data(), ', trim(nf90_strerror(ierr)), &
            ', name: start_time'
-      stop -1
+      stop 1
    end if
    ierr = nf90_get_att(ncid, NF90_GLOBAL, 'end_time', end_time)
    if (ierr.ne.NF90_NOERR) then
       write(*,*) 'ERROR: read_agri_data(), ', trim(nf90_strerror(ierr)), &
            ', name: end_time'
-      stop -1
+      stop 1
    end if
 
    read(start_time, date_format) st_yr, st_mn, st_dy, st_hr, st_mi
@@ -132,8 +132,8 @@ subroutine compute_time(ncid, imager_time, ny)
    call GREG2JD(en_yr, en_mn, en_dy, jd2)
 
    ! Add on a fraction to account for the start / end times
-   dfrac1 = (float(st_hr)/24.0) + (float(st_mi)/(24.0*60.0))
-   dfrac2 = (float(en_hr)/24.0) + (float(en_mi)/(24.0*60.0))
+   dfrac1 = (float(int(st_hr))/24.0) + (float(int(st_mi))/(24.0*60.0))
+   dfrac2 = (float(int(en_hr))/24.0) + (float(int(en_mi))/(24.0*60.0))
    jd1 = jd1 + dfrac1
    jd2 = jd2 + dfrac2
 

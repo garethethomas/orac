@@ -3,5 +3,5 @@ C     Wrapper for the HDF 4 "header" file
           implicit none
           public
           include "hdf.inc"
-      contains
+C      contains
       end module hdf_m

@@ -65,6 +65,8 @@
 !                 multiangular sensor. Prevents post-processor problems.
 ! 2017/03/16, GT: Changes for single-view aerosol retrieval mode.
 ! 2017/07/05, AP: Add channels_used, variables_retrieved.
+! 2024/03/20, GT: Added indexing for aerosol retrievals including thermal
+!                 channels.
 !
 ! Bugs:
 ! Assumes a single view for now.
@@ -810,12 +812,15 @@ end subroutine cloud_indexing_logic_two_layer
 ! Algorithm:
 ! 1) Use same BRDF logic as the cloud retrieval.
 ! 2) If there are sufficient channels, add Tau and Re to the state vector.
+! 3) If there are sufficient thermal channels, add aerosol-layer pressure and
+!    surface temperature to the state vector.
 !
 ! Arguments:
 ! Name Type In/Out/Both Description
 !
 ! History:
 ! 2015/08/17, AP: Original version
+! 2024/03/20, GT: Added thermal channel/layer height.
 !
 ! Bugs:
 ! None known.
@@ -840,6 +845,7 @@ subroutine aer_indexing_logic(Ctrl, SPixel, is_not_used_or_missing, &
 
    ! Define local variables
    integer :: ii_x, ii_xj, ii_xi
+   integer :: i_chan, n_ir_chans=0
 
    integer, parameter :: min_view = 2 ! AATSR chs at a minimum
 
@@ -860,7 +866,15 @@ subroutine aer_indexing_logic(Ctrl, SPixel, is_not_used_or_missing, &
                             X, ii_x, XJ, ii_xj, XI, ii_xi, &
                             SPixel%variables_retrieved, .true.)
 
-   if (ii_x+2 > count(.not. is_not_used_or_missing)) then
+   ! Check for and count thermal channels
+   n_ir_chans = 0
+   do i_chan = 1, Ctrl%Ind%Ny
+      if ((.not. is_not_used_or_missing(i_chan)) .and. &
+           any(Ctrl%Ind%Y_ID(i_chan) .eq. Ctrl%ir_chans)) &
+           n_ir_chans = n_ir_chans + 1
+   end do
+
+   if ((ii_x+2) > (count(.not. is_not_used_or_missing) - n_ir_chans)) then
       ! Insufficient wavelengths to perform retrieval
       status = SPixelIndexing
    else
@@ -871,6 +885,14 @@ subroutine aer_indexing_logic(Ctrl, SPixel, is_not_used_or_missing, &
                                SPixel%variables_retrieved)
       call Add_to_State_Vector(Ctrl, IDay, IFr,  X, ii_x, XJ, ii_xj, XI, ii_xi, &
                                SPixel%variables_retrieved, active = .false.)
+      ! If we have at least two thermal channels, then add layer pressure
+      ! land surface temperature to the state vector
+      if (n_ir_chans .ge. 2) then
+         call Add_to_State_Vector(Ctrl, IDay, IPc, X, ii_x, XJ, ii_xj, XI, ii_xi, &
+              SPixel%variables_retrieved)
+         call Add_to_State_Vector(Ctrl, IDay, ITs, X, ii_x, XJ, ii_xj, XI, ii_xi, &
+              SPixel%variables_retrieved)
+      end if
 
       SPixel%Nx  = ii_x
       SPixel%NXJ = ii_xj
@@ -895,6 +917,8 @@ end subroutine aer_indexing_logic
 !    share that view. If there are fewer than min_wvl, invalidate them.
 !    Otherwise, add the corresponding P terms to the state vector.
 ! 3) If there are sufficient channels, add Tau and Re to the state vector.
+! 4) If there are sufficient thermal channels, add aerosol-layer pressure and
+!    surface temperature to the state vector.
 !
 ! Arguments:
 ! Name Type In/Out/Both Description
@@ -927,6 +951,7 @@ subroutine swan_indexing_logic(Ctrl, SPixel, is_not_used_or_missing, &
    ! Define local variables
    integer :: ii_x, ii_xj, ii_xi
    integer :: i_view, i_solar, i_ctrl, j_solar, j_ctrl
+   integer :: i_chan, n_ir_chans=0
    integer :: nch, ch(Ctrl%Ind%NSolar)
    logical :: checked(Ctrl%Ind%NSolar)
 
@@ -1017,6 +1042,19 @@ subroutine swan_indexing_logic(Ctrl, SPixel, is_not_used_or_missing, &
                                SPixel%variables_retrieved, active = .false.)
       call Add_to_State_Vector(Ctrl, IDay, ISG,  X, ii_x, XJ, ii_xj, XI, ii_xi, &
                                SPixel%variables_retrieved)
+      ! Check for thermal channels - if we have at least two, then add
+      ! layer pressure and surface temperature to the state vector
+      do i_chan = 1, Ctrl%Ind%Ny
+         if ((.not. is_not_used_or_missing(i_chan)) .and. &
+              any(Ctrl%Ind%Y_ID(i_chan) .eq. Ctrl%ir_chans)) &
+              n_ir_chans = n_ir_chans + 1
+      end do
+      if (n_ir_chans .ge. 2) then
+         call Add_to_State_Vector(Ctrl, IDay, IPc, X, ii_x, XJ, ii_xj, XI, ii_xi, &
+              SPixel%variables_retrieved)
+         call Add_to_State_Vector(Ctrl, IDay, ITs, X, ii_x, XJ, ii_xj, XI, ii_xi, &
+              SPixel%variables_retrieved)
+      end if
 
       SPixel%Nx  = ii_x
       SPixel%NXJ = ii_xj
@@ -1034,6 +1072,8 @@ end subroutine swan_indexing_logic
 ! Algorithm:
 ! 1) Use same BRDF logic as the cloud retrieval.
 ! 2) If there are sufficient channels, add Tau and Re to the state vector.
+! 3) If there are sufficient thermal channels, add aerosol-layer pressure and
+!    surface temperature to the state vector.
 !
 ! Arguments:
 ! Name Type In/Out/Both Description
@@ -1064,6 +1104,7 @@ subroutine aer_indexing_logic_1view(Ctrl, SPixel, is_not_used_or_missing, &
 
    ! Define local variables
    integer :: ii_x, ii_xj, ii_xi
+   integer :: i_chan, n_ir_chans=0
 
    integer, parameter :: min_view = 1 ! Only using a single view.
 
@@ -1095,6 +1136,20 @@ subroutine aer_indexing_logic_1view(Ctrl, SPixel, is_not_used_or_missing, &
    call Add_to_State_Vector(Ctrl, IDay, IFr,  X, ii_x, XJ, ii_xj, XI, ii_xi, &
                             SPixel%variables_retrieved, active = .false.)
 
+   ! Check for thermal channels - if we have at least two, then add
+   ! layer pressure and surface temperature to the state vector
+   do i_chan = 1, Ctrl%Ind%Ny
+      if ((.not. is_not_used_or_missing(i_chan)) .and. &
+           any(Ctrl%Ind%Y_ID(i_chan) .eq. Ctrl%ir_chans)) &
+           n_ir_chans = n_ir_chans + 1
+   end do
+   if (n_ir_chans .ge. 2) then
+      call Add_to_State_Vector(Ctrl, IDay, IPc, X, ii_x, XJ, ii_xj, XI, ii_xi, &
+           SPixel%variables_retrieved)
+      call Add_to_State_Vector(Ctrl, IDay, ITs, X, ii_x, XJ, ii_xj, XI, ii_xi, &
+           SPixel%variables_retrieved)
+   end if
+   
    SPixel%Nx  = ii_x
    SPixel%NXJ = ii_xj
    SPixel%NXI = ii_xi

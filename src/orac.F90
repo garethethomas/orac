@@ -323,6 +323,7 @@ subroutine orac(mytask,ntasks,lower_bound,upper_bound,drifile)
    Ctrl%Ind%flags%do_ann_phase_uncertainty = .true.
    Ctrl%Ind%flags%do_phase               = .false.
    Ctrl%Ind%flags%do_covariance          = .false.
+   Ctrl%Ind%flags%do_meas_error          = .true.
 
    ! Set the size of the SAD_Chan and Cloud Class arrays based on the Ctrl
    ! parameters and read the SAD values.
@@ -330,6 +331,8 @@ subroutine orac(mytask,ntasks,lower_bound,upper_bound,drifile)
 
    call Read_SAD(Ctrl, SAD_Chan, SAD_LUT)
 
+   write(*,*) 'About to read RTM data'
+   write(*,*) Ctrl%RTMIntSelm, RTMIntMethNone
    ! Make read in rttov data in one go, no more segment reads
    if (Ctrl%RTMIntSelm /= RTMIntMethNone) then
       call read_input_dimensions_rtm(Ctrl%FID%PRTM, Ctrl%FID%LWRTM, &
@@ -507,12 +510,11 @@ subroutine orac(mytask,ntasks,lower_bound,upper_bound,drifile)
 
          ! Set up the super-pixel data values.
          call Get_SPixel(Ctrl, SAD_Chan, SAD_LUT, MSI_Data, RTM, SPixel, status)
-
          ! Nothing wrong so do the inversion.
          if (status == 0) &
             call Invert_Marquardt(Ctrl, SPixel, SAD_Chan, SAD_LUT, RTM_Pc, &
                                   Diag, status)
-
+         
          if (status == 0) then
             call Set_Diag(Ctrl, SPixel, MSI_Data, Diag)
 
@@ -557,7 +559,6 @@ subroutine orac(mytask,ntasks,lower_bound,upper_bound,drifile)
             RTM_Pc%Tc        = MissingXn
             RTM_Pc%dTc_dPc   = MissingSn
          end if
-
          ! Copy output to spixel_scan_out structures
          call prepare_output_primary(Ctrl, i, j, MSI_Data, SPixel, RTM_Pc, &
                                      Diag, output_data_1)
@@ -568,7 +569,7 @@ subroutine orac(mytask,ntasks,lower_bound,upper_bound,drifile)
       end do ! End of super-pixel X loop
 
    end do ! End of super-pixel Y loop
-
+  
    !$OMP END DO
 
    call Dealloc_SPixel(Ctrl, SPixel)

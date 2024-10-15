@@ -23,6 +23,8 @@
 ! 2017/01/17, GM: Eliminate the unnecessary indexing of the LUT grid wrt LUT
 !    type and channel.
 ! 2021/03/08, AP: Gather grid dimensions into LUT_Grid_t
+! 2024/09/24, GT: Added deallocation of surface pressure dimension array, if
+!    it is needed 
 !
 ! Bugs:
 ! None known.
@@ -58,6 +60,7 @@ subroutine Dealloc_LUT_Grid(LUT_Grid)
    deallocate(LUT_Grid%Solzen%x)
    deallocate(LUT_Grid%Satzen%x)
    deallocate(LUT_Grid%Relazi%x)
+   if (associated(LUT_Grid%SurfP%x)) deallocate(LUT_Grid%SurfP%x)
 
 end subroutine Dealloc_LUT_Grid
 

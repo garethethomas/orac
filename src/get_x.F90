@@ -346,9 +346,9 @@ subroutine Get_State(mode, i, Ctrl, SPixel, MSI_Data, flag, X, status, Err)
            Err(i,i) = err_temp * Scale2 ! SnSave is a variance
    end select
 
-   ! Draw from Ctrl structure (e.g. driver file). Used if method other
-   ! methods failed. Ctrl%Sx is squared after reading in. (SelmSAD of the
-   ! aerosol code
+   ! Draw from Ctrl structure (e.g. driver file). Used if other methods
+   ! failed. Ctrl%Sx is squared after reading in. (SelmSAD of the aerosol
+   ! code
    if (mode == SelmCtrl .or. status /= 0) then
       ! Use value from Ctrl structure
       if (flag /= 0) then

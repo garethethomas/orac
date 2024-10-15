@@ -23,12 +23,14 @@
 !    included regression coefficients for spectral response correction
 ! 2017/06/29, SS: Added cloud phase uncertainty thresholds, altered cloud phase
 !    thresholds
+! 2024/07/26, GT: Renamed module "pavolonis_constants_m", as previous name
+!    violated fortran variable name length limits
 !
 ! Bugs:
 ! None known.
 !-------------------------------------------------------------------------------
 
-module constants_cloud_typing_pavolonis_m
+module pavolonis_constants_m
 
    use common_constants_m
 
@@ -122,13 +124,14 @@ module constants_cloud_typing_pavolonis_m
    integer(sint), parameter :: YES = 1
    !--- used for, parameter ch3a_on_avhrr_flag (neither Ch3a nor Ch3b)
    integer(sint), parameter :: INEXISTENT = -1
-
    !--- USGS: land use class (24 bit flags)
    !--- Aux_file_CM_SAF_AVHRR_GAC_ori_0.05deg.nc
    integer(sint), parameter :: URBAN_AND_BUILTUP_LAND = 1
    integer(sint), parameter :: DRYLAND_CROPLAND_AND_PASTURE = 2
    integer(sint), parameter :: IRRIGATED_CROPLAND_AND_PASTURE = 3
-   integer(sint), parameter :: MIXED_DRYLAND_IRRIGATED_CROPLAND_AND_PASTURE = 4
+   ! Actual name is MIXED_DRYLAND_IRRIGATED_CROPLAND_AND_PASTURE
+   ! Too long for Fortran variable name!
+   integer(sint), parameter :: MIXED_DRYLAND_CROP_AND_PASTURE = 4
    integer(sint), parameter :: CROPLAND_GRASSLAND_MOSAIC = 5
    integer(sint), parameter :: CROPLAND_WOODLAND_MOSAIC = 6
    integer(sint), parameter :: GRASSLAND = 7
@@ -176,4 +179,4 @@ module constants_cloud_typing_pavolonis_m
 
 #include "coefficients_spectral_response_correction.inc"
 
-end module constants_cloud_typing_pavolonis_m
+end module pavolonis_constants_m

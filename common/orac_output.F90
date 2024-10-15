@@ -45,6 +45,9 @@
 ! 2018/01/19, GT: Removed QCFlag scale and offset values, as these should only
 !    be used for packed floating point data (not straight integers like QCFlag).
 ! 2018/06/08, SP: Add satellite azimuth angle to output.
+! 2023/10/10, GT: Added measurement uncertainties to secondary output.
+! 2024/03/20, GT: Added aerosol-layer height variables to primary.
+! 2024/07/03, GT: Added aerosol-layer height variables to secondary.
 !
 ! Bugs:
 ! None known.
@@ -74,6 +77,13 @@ module orac_output_m
       integer, pointer :: vid_swansea_p_uncertainty(:)
       integer, pointer :: vid_diffuse_frac(:)
       integer, pointer :: vid_diffuse_frac_uncertainty(:)
+
+      integer          :: vid_alp
+      integer          :: vid_alp_uncertainty
+      integer          :: vid_alh
+      integer          :: vid_alh_uncertainty
+      integer          :: vid_alt
+      integer          :: vid_alt_uncertainty
 
       integer          :: vid_cot
       integer          :: vid_cot_uncertainty
@@ -188,6 +198,33 @@ module orac_output_m
       real(sreal)   :: aer_uncertainty_offset = 0.0
       integer(sint) :: aer_uncertainty_vmin   = 0
       integer(sint) :: aer_uncertainty_vmax   = 32000
+
+      real(sreal)   :: alp_scale              = 0.1
+      real(sreal)   :: alp_offset             = 0.0
+      integer(sint) :: alp_vmin               = 0
+      integer(sint) :: alp_vmax               = 12000
+      real(sreal)   :: alp_uncertainty_scale  = 0.1
+      real(sreal)   :: alp_uncertainty_offset = 0.0
+      integer(sint) :: alp_uncertainty_vmin   = 0
+      integer(sint) :: alp_uncertainty_vmax   = 12000
+
+      real(sreal)   :: alh_scale              = 0.01
+      real(sreal)   :: alh_offset             = 0.0
+      integer(sint) :: alh_vmin               = -1000
+      integer(sint) :: alh_vmax               = 3500
+      real(sreal)   :: alh_uncertainty_scale  = 0.01
+      real(sreal)   :: alh_uncertainty_offset = 0.0
+      integer(sint) :: alh_uncertainty_vmin   = 0
+      integer(sint) :: alh_uncertainty_vmax   = 2000
+
+      real(sreal)   :: alt_scale              = 0.01
+      real(sreal)   :: alt_offset             = 0.0
+      integer(sint) :: alt_vmin               = 0
+      integer(sint) :: alt_vmax               = 32000
+      real(sreal)   :: alt_uncertainty_scale  = 0.01
+      real(sreal)   :: alt_uncertainty_offset = 0.0
+      integer(sint) :: alt_uncertainty_vmin   = 0
+      integer(sint) :: alt_uncertainty_vmax   = 32000
 
       real(sreal)   :: rho_scale              = 0.0001
       real(sreal)   :: rho_offset             = 0.0
@@ -404,7 +441,7 @@ module orac_output_m
       integer(byte) :: cldtype_scale  = 1
       integer(byte) :: cldtype_offset = 0
       integer(byte) :: cldtype_vmin   = 0
-      integer(byte) :: cldtype_vmax   = 9
+      integer(byte) :: cldtype_vmax   = 12
 
       integer(byte) :: cldmask_scale  = 1
       integer(byte) :: cldmask_offset = 0
@@ -471,6 +508,13 @@ module orac_output_m
       integer(sint), pointer :: swansea_p_uncertainty(:,:,:)
       integer(sint), pointer :: diffuse_frac(:,:,:)
       integer(sint), pointer :: diffuse_frac_uncertainty(:,:,:)
+
+      integer(sint), pointer :: alp(:,:)
+      integer(sint), pointer :: alp_uncertainty(:,:)
+      integer(sint), pointer :: alh(:,:)
+      integer(sint), pointer :: alh_uncertainty(:,:)
+      integer(sint), pointer :: alt(:,:)
+      integer(sint), pointer :: alt_uncertainty(:,:)
 
       integer(sint), pointer :: cot(:,:)
       integer(sint), pointer :: cot_uncertainty(:,:)
@@ -571,6 +615,8 @@ module orac_output_m
       integer          :: vid_aot550_fg
       integer          :: vid_aer_ap
       integer          :: vid_aer_fg
+      integer          :: vid_alp_ap
+      integer          :: vid_alp_fg
 
       integer, pointer :: vid_rho_ap(:)
       integer, pointer :: vid_rho_fg(:)
@@ -600,6 +646,7 @@ module orac_output_m
       integer          :: vid_scanline_v
 
       integer, pointer :: vid_channels(:)
+      integer, pointer :: vid_Sy(:)
       integer, pointer :: vid_y0(:)
       integer, pointer :: vid_residuals(:)
 
@@ -624,6 +671,11 @@ module orac_output_m
       real(sreal)    :: aer_fg_offset = 0.0
       integer(sint)  :: aer_fg_vmin   = 0
       integer(sint)  :: aer_fg_vmax   = 32000
+
+      real(sreal)    :: alp_scale              = 0.1
+      real(sreal)    :: alp_offset             = 0.0
+      integer(sint)  :: alp_vmin               = 0
+      integer(sint)  :: alp_vmax               = 12000
 
       real(sreal)    :: rho_ap_scale  = 0.000
       real(sreal)    :: rho_ap_offset = 0.0
@@ -707,6 +759,11 @@ module orac_output_m
       integer(sint), pointer :: channels_vmin(:)
       integer(sint), pointer :: channels_vmax(:)
 
+      real(sreal),   pointer :: Sy_scale(:)
+      real(sreal),   pointer :: Sy_offset(:)
+      integer(sint), pointer :: Sy_vmin(:)
+      integer(sint), pointer :: Sy_vmax(:)
+
       real(sreal),   pointer :: y0_scale(:)
       real(sreal),   pointer :: y0_offset(:)
       integer(sint), pointer :: y0_vmin(:)
@@ -732,6 +789,8 @@ module orac_output_m
       integer(sint), pointer :: aot550_fg(:,:)
       integer(sint), pointer :: aer_ap(:,:)
       integer(sint), pointer :: aer_fg(:,:)
+      integer(sint), pointer :: alp_ap(:,:)
+      integer(sint), pointer :: alp_fg(:,:)
 
       integer(sint), pointer :: rho_ap(:,:,:)
       integer(sint), pointer :: rho_fg(:,:,:)
@@ -759,6 +818,7 @@ module orac_output_m
       integer(sint), pointer :: albedo(:,:,:)
 
       integer(sint), pointer :: channels(:,:,:)
+      integer(sint), pointer :: Sy(:,:,:)
       integer(sint), pointer :: y0(:,:,:)
       integer(sint), pointer :: residuals(:,:,:)
 

@@ -41,22 +41,22 @@ function extract_nise_grid(fid, name, gridlist, data, verbose) result(stat)
    logical,           intent(in)    :: verbose
 
    ! Return value
-   integer(kind=4)                :: stat
+   integer(kind=4)                  :: stat
    ! Local variables
-   integer                        :: comma
-   integer(kind=4)                :: gid
-   integer(kind=4)                :: xdim, ydim
-   real(kind=8),    dimension(2)  :: upleft, lowright
-   integer(kind=4)                :: proj, zone, sphere
-   real(kind=8),    dimension(13) :: param
-   integer(kind=4), dimension(2)  :: start, stride, edge
+   integer                          :: comma
+   integer(kind=4)                  :: gid
+   integer(kind=4)                  :: xdim, ydim
+   real(kind=8),    dimension(2)    :: upleft, lowright
+   integer(kind=4)                  :: proj, zone, sphere
+   real(kind=8),    dimension(13)   :: param
+   integer(kind=4), dimension(2)    :: start, stride, edge
    integer(kind=1), allocatable, dimension(:,:) :: tmp_data
    ! External functions (the hdf-eos library)
-   integer*4, external            :: gdattach
-   integer*4, external            :: gdgridinfo
-   integer*4, external            :: gdprojinfo
-   integer*4, external            :: gdrdfld
-   integer*4, external            :: gddetach
+   integer(kind=4), external        :: gdattach
+   integer(kind=4), external        :: gdgridinfo
+   integer(kind=4), external        :: gdprojinfo
+   integer(kind=4), external        :: gdrdfld
+   integer(kind=4), external        :: gddetach
 
    if (verbose) write(*,*) '<<<<<<<<<<<<<<< Entering extract_nise_grid()'
 

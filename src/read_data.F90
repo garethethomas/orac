@@ -50,6 +50,10 @@ subroutine Read_Data(Ctrl, MSI_Data, SAD_Chan)
    type(Data_t),     intent(inout) :: MSI_Data
    type(SAD_Chan_t), intent(inout) :: SAD_Chan(:)
 
+   ! Local variables
+   integer                         :: i
+   real(kind=sreal), allocatable   :: outsd(:,:)
+
    ! Nullify pointers in case some are not associated.
    call Nullify_Data(Ctrl, MSI_Data)
 
@@ -86,6 +90,16 @@ subroutine Read_Data(Ctrl, MSI_Data, SAD_Chan)
    if (Ctrl%sabotage_inputs) then
       if (Ctrl%verbose) write(*,*) 'Sabatoging input data'
       call sabotage_inputs(Ctrl, MSI_Data)
+   end if
+
+   if (Ctrl%BoxCar .gt. 0) then
+      allocate(outsd(Ctrl%Ind%Xmax, Ctrl%Ind%Ymax))
+      if (Ctrl%verbose) write(*,*) 'Applying ',Ctrl%BoxCar,' pixel boxcar smoothing to input data'
+      do i=1, Ctrl%Ind%Ny
+         call boxcar_smooth(Ctrl%BoxCar, Ctrl%Ind%Xmax, Ctrl%Ind%Ymax, &
+              MSI_Data%MSI(:,:,i), sreal_fill_value, outsd)
+      end do
+      deallocate(outsd)
    end if
 
    if (Ctrl%verbose) write(*,*) 'Determining Illumination data'

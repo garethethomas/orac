@@ -60,6 +60,8 @@
 ! 2015/08/31, AP: Read channels described by a correlation value rather than
 !    assuming them from the channel ordering.
 ! 2015/09/07, AP: Allow verbose to be controlled from the driver file.
+! 2024/10/01, GT: Add reading of surface emissivity (and allocation of
+!                 associated MSI_Data%surf_emis array)
 !
 ! Bugs:
 ! None known.
@@ -79,8 +81,9 @@ subroutine Read_ALB(Ctrl, MSI_Data)
    type(Data_t), intent(inout) :: MSI_Data
 
    integer                                           :: ncid, i, j, k, ind
-   integer(kind=lint)                                :: NAlb, NCor
+   integer(kind=lint)                                :: NAlb, NCor, NEmis
    integer(kind=lint), allocatable, dimension(:)     :: alb_instr_ch_numbers, subs
+   integer(kind=lint), allocatable, dimension(:)     :: emis_instr_ch_numbers
    integer(kind=lint), allocatable, dimension(:,:)   :: cor_ch_numbers
    real(kind=sreal),   allocatable, dimension(:,:,:) :: cor_temp
 
@@ -89,9 +92,12 @@ subroutine Read_ALB(Ctrl, MSI_Data)
    call ncdf_open(ncid, Ctrl%FID%Alb, 'Read_ALB()')
 
    ! Read instrument channel indices from file
-   NAlb = ncdf_dim_length(ncid, 'nc_alb', 'Read_ALB()')
+   NAlb  = ncdf_dim_length(ncid, 'nc_alb', 'Read_ALB()')
+   NEmis = ncdf_dim_length(ncid, 'nc_emis', 'Read_ALB()')
    allocate(alb_instr_ch_numbers(NAlb))
+   allocate(emis_instr_ch_numbers(NEmis))
    call ncdf_read_array(ncid, "alb_abs_ch_numbers", alb_instr_ch_numbers)
+   call ncdf_read_array(ncid, "emis_abs_ch_numbers", emis_instr_ch_numbers)
 
    ! Find the subscripts Ctrl%Ind%ysolar within alb_abs_ch_numbers
    allocate(subs(Ctrl%Ind%NSolar))
@@ -186,8 +192,30 @@ subroutine Read_ALB(Ctrl, MSI_Data)
       deallocate(cor_temp)
    end if
 
-   deallocate(alb_instr_ch_numbers)
+   ! Now move on to thermal channels for reading the surface emissivity
+   ! Redefine the "subs" array for the thermal channels and find the
+   ! subscripts Ctrl%Ind%ythermal within emis_abs_ch_numbers
+   if (Ctrl%Ind%NThermal > 0) then
+      deallocate(subs)
+      allocate(subs(Ctrl%Ind%NThermal))
+      do i = 1, Ctrl%Ind%NThermal
+         do j = 1, NEmis
+            if (emis_instr_ch_numbers(j) == Ctrl%Ind%ICh(Ctrl%Ind%YThermal(i))) then
+               subs(i) = j
+               exit
+            end if
+         end do
+      end do
+      ! Allocate surf_emis data structure
+      allocate(MSI_Data%surf_emis(Ctrl%Ind%Xmax, Ctrl%Ind%Ymax, Ctrl%Ind%NThermal))
+      ! And read data
+      call ncdf_read_array(ncid, "emis_data", MSI_Data%surf_emis, 3, subs)
+   end if
+
+   ! Deallocate remaining local arrays
    deallocate(subs)
+   deallocate(alb_instr_ch_numbers)
+   deallocate(emis_instr_ch_numbers)
 
    ! Close alb input file
    call ncdf_close(ncid, 'read_alb()')

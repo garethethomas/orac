@@ -20,6 +20,8 @@
 ! 2015/12/30, AP: Have all albedo fields use the same values.
 ! 2016/03/04, AP: Tidy prepare_*_packed_float.
 ! 2017/01/09, CP: ML additions.
+! 2023/10/10, GT: Added optional output of measurement uncertainties
+! 2024/07/03, GT: Added aerosol-layer height and surface-temperature variables.
 !
 ! Bugs:
 ! None known.
@@ -73,6 +75,23 @@ if (indexing%flags%do_aerosol) then
         output_data%aer_fg_scale, output_data%aer_fg_offset, &
         output_data%aer_fg_vmin, output_data%aer_fg_vmax, &
         sreal_fill_value, output_data%aer_fg_vmax)
+
+   if (indexing%NThermal .ge. 2) then
+      !-------------------------------------------------------------------------
+      ! alp_ap, alp_fg
+      !-------------------------------------------------------------------------
+      call prepare_short_packed_float( &
+           input_data%alp_ap(i,j), output_data%alp_ap(i,j), &
+           output_data%alp_scale, output_data%alp_offset, &
+           output_data%alp_vmin, output_data%alp_vmax, &
+           sreal_fill_value, output_data%alp_vmax)
+      
+      call prepare_short_packed_float( &
+           input_data%alp_fg(i,j), output_data%alp_fg(i,j), &
+           output_data%alp_scale, output_data%alp_offset, &
+           output_data%alp_vmin, output_data%alp_vmax, &
+           sreal_fill_value, output_data%alp_vmax)
+   end if
 end if
 
 if (indexing%flags%do_rho) then
@@ -192,21 +211,6 @@ if (indexing%flags%do_cloud) then
         sreal_fill_value, output_data%ctp_fg_vmax)
 
    !----------------------------------------------------------------------------
-   ! stemp_ap, stemp_fg
-   !----------------------------------------------------------------------------
-   call prepare_short_packed_float( &
-        input_data%stemp_ap(i,j), output_data%stemp_ap(i,j), &
-        output_data%stemp_ap_scale, output_data%stemp_ap_offset, &
-        output_data%stemp_ap_vmin, output_data%stemp_ap_vmax, &
-        sreal_fill_value, output_data%stemp_ap_vmax)
-
-   call prepare_short_packed_float( &
-        input_data%stemp_fg(i,j), output_data%stemp_fg(i,j), &
-        output_data%stemp_fg_scale, output_data%stemp_fg_offset, &
-        output_data%stemp_fg_vmin, output_data%stemp_fg_vmax, &
-        sreal_fill_value, output_data%stemp_fg_vmax)
-
-   !----------------------------------------------------------------------------
    ! albedo
    !----------------------------------------------------------------------------
    do k=1,indexing%NSolar
@@ -267,6 +271,25 @@ if (indexing%flags%do_cloud_layer_2) then
 
 end if
 
+if ( indexing%flags%do_cloud .or. &
+     (indexing%flags%do_aerosol .and. indexing%NThermal .ge. 2) ) then
+   !----------------------------------------------------------------------------
+   ! stemp_ap, stemp_fg
+   !----------------------------------------------------------------------------
+   call prepare_short_packed_float( &
+        input_data%stemp_ap(i,j), output_data%stemp_ap(i,j), &
+        output_data%stemp_ap_scale, output_data%stemp_ap_offset, &
+        output_data%stemp_ap_vmin, output_data%stemp_ap_vmax, &
+        sreal_fill_value, output_data%stemp_ap_vmax)
+
+   call prepare_short_packed_float( &
+        input_data%stemp_fg(i,j), output_data%stemp_fg(i,j), &
+        output_data%stemp_fg_scale, output_data%stemp_fg_offset, &
+        output_data%stemp_fg_vmin, output_data%stemp_fg_vmax, &
+        sreal_fill_value, output_data%stemp_fg_vmax)
+end if
+
+
    !----------------------------------------------------------------------------
    ! channels
    !----------------------------------------------------------------------------
@@ -277,6 +300,19 @@ end if
            output_data%channels_vmin(k), output_data%channels_vmax(k), &
            sreal_fill_value, sint_fill_value)
    end do
+
+   !----------------------------------------------------------------------------
+   ! Measurement error (diagonals)
+   !----------------------------------------------------------------------------
+   if (indexing%flags%do_meas_error) then
+      do k=1,indexing%Ny
+         call prepare_short_packed_float( &
+              input_data%Sy(i,j,k), output_data%Sy(i,j,k), &
+              output_data%Sy_scale(k), output_data%Sy_offset(k), &
+              output_data%Sy_vmin(k), output_data%Sy_vmax(k), &
+              sreal_fill_value, sint_fill_value)
+      end do
+   end if
 
    !----------------------------------------------------------------------------
    ! y0

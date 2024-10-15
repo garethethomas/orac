@@ -37,6 +37,7 @@
 ! 2018/06/08, SP: Add satellite azimuth angle to output.
 ! 2022/01/27, GT: Add State type, to hold a priori/first guess state parameters
 !    read from auxiliary files. So far, it only holds CTP.
+! 2024/10/01, GT: Add emissivity to surface data
 !
 ! Bugs:
 ! None known.
@@ -79,6 +80,7 @@ module Data_m
       real,               pointer :: rho_0d(:,:,:)
       real,               pointer :: rho_dv(:,:,:)
       real,               pointer :: rho_dd(:,:,:)
+      real,               pointer :: surf_emis(:,:,:)
       integer(byte),      pointer :: Type(:,:)
       integer(byte),      pointer :: cldtype(:,:,:)
       integer(byte),      pointer :: cldmask(:,:,:)

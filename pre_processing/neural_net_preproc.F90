@@ -50,7 +50,11 @@
 !    NOAA satellites, introduced flag correct_realy_morning_noaas (default true)
 !    to use only IR data at daytime
 ! 2017/06/28, SS: added new 1.6um ANN
-
+! 2024/07/26, GT: Renamed module "pavolonis_constants_m", as previous name
+!    violated fortran variable name length limits
+!    Added type-cast to standard integers for variablesbeing converted to real
+!    or in MOD statements, as "kind=sint" variables were causing errors.
+!
 ! Bugs:
 ! None known.
 !-------------------------------------------------------------------------------
@@ -69,7 +73,7 @@ subroutine ann_cloud_mask(channel1, channel2, channel3a, channel3b, &
      ch3a_on_avhrr_flag, glint_angle, sensor_name, platform, verbose)
    !------------------------------------------------------------------------
 
-   use constants_cloud_typing_pavolonis_m
+   use pavolonis_constants_m
    use common_constants_m
    use neural_net_constants_m
 
@@ -586,13 +590,13 @@ subroutine ann_cloud_mask(channel1, channel2, channel3a, channel3b, &
 
       if (correct_sst) then
          ! Testing ice-free sea skin temperature correction
-         if  (( lsflag .eq. 0_byte ) .AND. (niseflag .eq. NO) .and. (mod(illum_nn, 3) .eq. 1) ) then
+         if  (( lsflag .eq. 0_byte ) .AND. (niseflag .eq. NO) .and. (mod(int(illum_nn), 3) .eq. 1) ) then
             output = output - ((300.- skint)/30.)*0.30 ! daytime
          end if
-         if  (( lsflag .eq. 0_byte ) .AND. (niseflag .eq. NO) .and. (mod(illum_nn, 3) .eq. 2) ) then
+         if  (( lsflag .eq. 0_byte ) .AND. (niseflag .eq. NO) .and. (mod(int(illum_nn), 3) .eq. 2) ) then
             output = output - ((300.- skint)/30.)*0.35 ! twilight
          end if
-         if  (( lsflag .eq. 0_byte ) .AND. (niseflag .eq. NO) .and. (mod(illum_nn, 3) .eq. 0) ) then
+         if  (( lsflag .eq. 0_byte ) .AND. (niseflag .eq. NO) .and. (mod(int(illum_nn), 3) .eq. 0) ) then
             output = output - ((300.- skint)/30.)*0.30 ! night
          end if
       end if
@@ -666,7 +670,7 @@ subroutine ann_cloud_phase(channel1, channel2, channel3a, channel3b, &
     ch3a_on_avhrr_flag, sensor_name, platform, skint, verbose)
     !------------------------------------------------------------------------
 
-   use constants_cloud_typing_pavolonis_m
+   use pavolonis_constants_m
    use common_constants_m
    use neural_net_constants_m
 
@@ -1065,7 +1069,7 @@ subroutine neural_net(nneurons, ninput, minmax_train, inv, outv, &
      temperature, output, noob)
    !------------------------------------------------------------------------
 
-   use constants_cloud_typing_pavolonis_m
+   use pavolonis_constants_m
    use common_constants_m
    use neural_net_constants_m
 
@@ -1123,7 +1127,7 @@ subroutine neural_net(nneurons, ninput, minmax_train, inv, outv, &
 
    !apply sigmoidal function to each element of resulting vector vector_res1
    do ineuron = 1, nneurons
-      call sigmoide_function(temperature/float(ninput), cutoff, &
+      call sigmoide_function(temperature/float(int(ninput)), cutoff, &
            vector_res1(ineuron), sigmoide)
       intermed(ineuron) = sigmoide
    end do
@@ -1138,7 +1142,7 @@ subroutine neural_net(nneurons, ninput, minmax_train, inv, outv, &
    scalar_res2 = dot_product(intermed, outv)
 
    !apply sigmoidal function to scalar result
-   call sigmoide_function(temperature/float(nneurons), cutoff, scalar_res2, sigmoide)
+   call sigmoide_function(temperature/float(int(nneurons)), cutoff, scalar_res2, sigmoide)
    output = sigmoide
 
    !rescale output

@@ -39,6 +39,7 @@
 ! 2017/06/22, OS: Added phase variables.
 ! 2017/07/05, AP: Add channels_used, variables_retrieved. New QC.
 ! 2018/06/08, SP: Add satellite azimuth angle to output.
+! 2024/07/03, GT: Added aerosol-layer height and surface-temperature variables.
 !
 ! Bugs:
 ! None known.
@@ -78,196 +79,214 @@ subroutine read_input_primary_common(ncid, input_data, indexing, sval, verbose)
    character(len=512) :: input_dummy
 
 
-if (indexing%flags%do_aerosol) then
-   call ncdf_read_packed_array(ncid, "aot550", input_data%aot550, &
-        start = [1, sval])
-   call ncdf_read_packed_array(ncid, "aot550_uncertainty", &
-        input_data%aot550_uncertainty, start = [1, sval])
-   call ncdf_read_packed_array(ncid, "aot870", input_data%aot870,  &
-        start = [1, sval])
-   call ncdf_read_packed_array(ncid, "aot870_uncertainty", &
-        input_data%aot870_uncertainty, start = [1, sval])
+   if (indexing%flags%do_aerosol) then
+      call ncdf_read_packed_array(ncid, "aot550", input_data%aot550, &
+           start = [1, sval])
+      call ncdf_read_packed_array(ncid, "aot550_uncertainty", &
+           input_data%aot550_uncertainty, start = [1, sval])
+      call ncdf_read_packed_array(ncid, "aot870", input_data%aot870,  &
+           start = [1, sval])
+      call ncdf_read_packed_array(ncid, "aot870_uncertainty", &
+           input_data%aot870_uncertainty, start = [1, sval])
+      
+      call ncdf_read_packed_array(ncid, "aer", input_data%aer, start = [1, sval])
+      call ncdf_read_packed_array(ncid, "aer_uncertainty", &
+           input_data%aer_uncertainty, start = [1, sval])
+      
+      if (indexing%NThermal .ge. 2) then
+         call ncdf_read_packed_array(ncid, "alp", input_data%alp, &
+              start = [1, sval])
+         call ncdf_read_packed_array(ncid, "alp_uncertainty", &
+              input_data%alp_uncertainty, start = [1, sval])
+         call ncdf_read_packed_array(ncid, "alh", input_data%alh, &
+              start = [1, sval])
+         call ncdf_read_packed_array(ncid, "alh_uncertainty", &
+              input_data%alh_uncertainty, start = [1, sval])
+         call ncdf_read_packed_array(ncid, "alt", input_data%alt, &
+              start = [1, sval])
+         call ncdf_read_packed_array(ncid, "alt_uncertainty", &
+              input_data%alt_uncertainty, start = [1, sval])
+      end if
+   end if
+   
+   if (indexing%flags%do_rho) then
+      i_rho = 0
+      do i=1,indexing%NSolar
+         write(input_num, "(i4)") indexing%Y_Id(indexing%YSolar(i))
+         
+         do j=1,MaxRho_XX
+            if (indexing%rho_terms(i,j)) then
+               i_rho = i_rho + 1
+               
+               call create_rho_field_name(j, 1, input_num, input_dummy)
+               call ncdf_read_packed_array(ncid, input_dummy, &
+                    input_data%rho(:,:,i_rho), start = [1, sval])
+               
+               call create_rho_field_name(j, 2, input_num, input_dummy)
+               call ncdf_read_packed_array(ncid, input_dummy, &
+                    input_data%rho_uncertainty(:,:,i_rho), start = [1, sval])
+            end if
+         end do
+      end do
+   end if
 
-   call ncdf_read_packed_array(ncid, "aer", input_data%aer, start = [1, sval])
-   call ncdf_read_packed_array(ncid, "aer_uncertainty", &
-        input_data%aer_uncertainty, start = [1, sval])
-end if
-
-if (indexing%flags%do_rho) then
-   i_rho = 0
-   do i=1,indexing%NSolar
-      write(input_num, "(i4)") indexing%Y_Id(indexing%YSolar(i))
-
-      do j=1,MaxRho_XX
-         if (indexing%rho_terms(i,j)) then
+   if (indexing%flags%do_swansea) then
+      i_rho = 0
+      do i=1,indexing%NSolar
+         if (indexing%ss_terms(i)) then
             i_rho = i_rho + 1
-
-            call create_rho_field_name(j, 1, input_num, input_dummy)
+            
+            write(input_num, "(i4)") indexing%Y_Id(indexing%YSolar(i))
+            
+            input_dummy='swansea_s_in_channel_no_'//trim(adjustl(input_num))
             call ncdf_read_packed_array(ncid, input_dummy, &
-                 input_data%rho(:,:,i_rho), start = [1, sval])
-
-            call create_rho_field_name(j, 2, input_num, input_dummy)
+                 input_data%swansea_s(:,:,i_rho), start = [1, sval])
+            input_dummy='swansea_s_uncertainty_in_channel_no_'// &
+                 trim(adjustl(input_num))
             call ncdf_read_packed_array(ncid, input_dummy, &
-                 input_data%rho_uncertainty(:,:,i_rho), start = [1, sval])
+                 input_data%swansea_s_uncertainty(:,:,i_rho), &
+                 start = [1, sval])
+            
+            input_dummy='diffuse_frac_in_channel_no_'//trim(adjustl(input_num))
+            call ncdf_read_packed_array(ncid, input_dummy, &
+                 input_data%diffuse_frac(:,:,i_rho), start = [1, sval])
+            input_dummy='diffuse_frac_uncertainty_in_channel_no_'// &
+                 trim(adjustl(input_num))
+            call ncdf_read_packed_array(ncid, input_dummy, &
+                 input_data%diffuse_frac_uncertainty(:,:,i_rho), &
+                 start = [1, sval])
          end if
       end do
-   end do
-end if
-
-if (indexing%flags%do_swansea) then
-   i_rho = 0
-   do i=1,indexing%NSolar
-      if (indexing%ss_terms(i)) then
-         i_rho = i_rho + 1
-
-         write(input_num, "(i4)") indexing%Y_Id(indexing%YSolar(i))
-
-         input_dummy='swansea_s_in_channel_no_'//trim(adjustl(input_num))
+      
+      do i=1,indexing%NViews
+         write(input_num, "(i4)") i
+         
+         input_dummy='swansea_p_in_view_no_'//trim(adjustl(input_num))
          call ncdf_read_packed_array(ncid, input_dummy, &
-              input_data%swansea_s(:,:,i_rho), start = [1, sval])
-         input_dummy='swansea_s_uncertainty_in_channel_no_'// &
+              input_data%swansea_p(:,:,i), start = [1, sval])
+         input_dummy='swansea_p_uncertainty_in_view_no_'// &
               trim(adjustl(input_num))
          call ncdf_read_packed_array(ncid, input_dummy, &
-              input_data%swansea_s_uncertainty(:,:,i_rho), &
-              start = [1, sval])
-
-         input_dummy='diffuse_frac_in_channel_no_'//trim(adjustl(input_num))
-         call ncdf_read_packed_array(ncid, input_dummy, &
-              input_data%diffuse_frac(:,:,i_rho), start = [1, sval])
-         input_dummy='diffuse_frac_uncertainty_in_channel_no_'// &
-              trim(adjustl(input_num))
-         call ncdf_read_packed_array(ncid, input_dummy, &
-              input_data%diffuse_frac_uncertainty(:,:,i_rho), &
-              start = [1, sval])
-      end if
-   end do
-
-   do i=1,indexing%NViews
-      write(input_num, "(i4)") i
-
-      input_dummy='swansea_p_in_view_no_'//trim(adjustl(input_num))
-      call ncdf_read_packed_array(ncid, input_dummy, &
-           input_data%swansea_p(:,:,i), start = [1, sval])
-      input_dummy='swansea_p_uncertainty_in_view_no_'// &
-           trim(adjustl(input_num))
-      call ncdf_read_packed_array(ncid, input_dummy, &
-           input_data%swansea_p_uncertainty(:,:,i), start = [1, sval])
-   end do
-end if
-
-if (indexing%flags%do_cloud) then
-   call ncdf_read_packed_array(ncid, "cot", input_data%cot, &
-        start = [1, sval])
-   call ncdf_read_packed_array(ncid, "cot_uncertainty", &
-        input_data%cot_uncertainty, start = [1, sval])
-
-   call ncdf_read_packed_array(ncid, "cer", input_data%cer, start = [1, sval])
-   call ncdf_read_packed_array(ncid, "cer_uncertainty", &
-        input_data%cer_uncertainty, start = [1, sval])
-
-   call ncdf_read_packed_array(ncid, "ctp", input_data%ctp, start = [1, sval])
-   call ncdf_read_packed_array(ncid, "ctp_uncertainty", &
-        input_data%ctp_uncertainty, start = [1, sval])
-
-   call ncdf_read_packed_array(ncid, "ctp_corrected", &
-        input_data%ctp_corrected, start = [1, sval])
-   call ncdf_read_packed_array(ncid, "ctp_corrected_uncertainty", &
-        input_data%ctp_corrected_uncertainty, start = [1, sval])
-
-   call ncdf_read_packed_array(ncid, "cc_total", input_data%cc_total, &
-        start = [1, sval])
-   call ncdf_read_packed_array(ncid, "cc_total_uncertainty", &
-        input_data%cc_total_uncertainty, start = [1, sval])
-
-   call ncdf_read_packed_array(ncid, "stemp", input_data%stemp, &
-        start = [1, sval])
-   call ncdf_read_packed_array(ncid, "stemp_uncertainty", &
-        input_data%stemp_uncertainty, start = [1, sval])
-
-   call ncdf_read_packed_array(ncid, "cth", input_data%cth, &
-        start = [1, sval])
-   call ncdf_read_packed_array(ncid, "cth_uncertainty", &
-        input_data%cth_uncertainty, start = [1, sval])
-
-   call ncdf_read_packed_array(ncid, "cth_corrected", &
-        input_data%cth_corrected, start = [1, sval])
-   call ncdf_read_packed_array(ncid, "cth_corrected_uncertainty", &
-        input_data%cth_corrected_uncertainty, start = [1, sval])
-
-   call ncdf_read_packed_array(ncid, "ctt", input_data%ctt, &
-        start = [1, sval])
-   call ncdf_read_packed_array(ncid, "ctt_uncertainty", &
-        input_data%ctt_uncertainty, start = [1, sval])
-
-   call ncdf_read_packed_array(ncid, "ctt_corrected", &
-        input_data%ctt_corrected, start = [1, sval])
-   call ncdf_read_packed_array(ncid, "ctt_corrected_uncertainty", &
-        input_data%ctt_corrected_uncertainty, start = [1, sval])
-
-   call ncdf_read_packed_array(ncid, "cwp", input_data%cwp, &
-        start = [1, sval])
-   call ncdf_read_packed_array(ncid, "cwp_uncertainty", &
-        input_data%cwp_uncertainty, start = [1, sval])
-
-   do i=1,indexing%NSolar
-      write(input_num,"(i4)") indexing%Y_Id(indexing%YSolar(i))
-
-      input_dummy='cloud_albedo_in_channel_no_'//trim(adjustl(input_num))
-      call ncdf_read_packed_array(ncid, input_dummy, &
-           input_data%cloud_albedo(:,:,i), start = [1, sval])
-
-      input_dummy='cloud_albedo_uncertainty_in_channel_no_'// &
-           trim(adjustl(input_num))
-      call ncdf_read_packed_array(ncid, input_dummy, &
-           input_data%cloud_albedo_uncertainty(:,:,i), &
+              input_data%swansea_p_uncertainty(:,:,i), start = [1, sval])
+      end do
+   end if
+   
+   if (indexing%flags%do_cloud) then
+      call ncdf_read_packed_array(ncid, "cot", input_data%cot, &
            start = [1, sval])
-   end do
+      call ncdf_read_packed_array(ncid, "cot_uncertainty", &
+           input_data%cot_uncertainty, start = [1, sval])
+      
+      call ncdf_read_packed_array(ncid, "cer", input_data%cer, start = [1, sval])
+      call ncdf_read_packed_array(ncid, "cer_uncertainty", &
+           input_data%cer_uncertainty, start = [1, sval])
+      
+      call ncdf_read_packed_array(ncid, "ctp", input_data%ctp, start = [1, sval])
+      call ncdf_read_packed_array(ncid, "ctp_uncertainty", &
+           input_data%ctp_uncertainty, start = [1, sval])
+      
+      call ncdf_read_packed_array(ncid, "ctp_corrected", &
+           input_data%ctp_corrected, start = [1, sval])
+      call ncdf_read_packed_array(ncid, "ctp_corrected_uncertainty", &
+           input_data%ctp_corrected_uncertainty, start = [1, sval])
+      
+      call ncdf_read_packed_array(ncid, "cc_total", input_data%cc_total, &
+           start = [1, sval])
+      call ncdf_read_packed_array(ncid, "cc_total_uncertainty", &
+           input_data%cc_total_uncertainty, start = [1, sval])
+      
+      call ncdf_read_packed_array(ncid, "cth", input_data%cth, &
+           start = [1, sval])
+      call ncdf_read_packed_array(ncid, "cth_uncertainty", &
+           input_data%cth_uncertainty, start = [1, sval])
+      
+      call ncdf_read_packed_array(ncid, "cth_corrected", &
+           input_data%cth_corrected, start = [1, sval])
+      call ncdf_read_packed_array(ncid, "cth_corrected_uncertainty", &
+           input_data%cth_corrected_uncertainty, start = [1, sval])
+      
+      call ncdf_read_packed_array(ncid, "ctt", input_data%ctt, &
+           start = [1, sval])
+      call ncdf_read_packed_array(ncid, "ctt_uncertainty", &
+           input_data%ctt_uncertainty, start = [1, sval])
 
-   do i=1,indexing%NThermal
-      write(input_num,"(i4)") indexing%Y_Id(indexing%YThermal(i))
+      call ncdf_read_packed_array(ncid, "ctt_corrected", &
+           input_data%ctt_corrected, start = [1, sval])
+      call ncdf_read_packed_array(ncid, "ctt_corrected_uncertainty", &
+           input_data%ctt_corrected_uncertainty, start = [1, sval])
+      
+      call ncdf_read_packed_array(ncid, "cwp", input_data%cwp, &
+           start = [1, sval])
+      call ncdf_read_packed_array(ncid, "cwp_uncertainty", &
+           input_data%cwp_uncertainty, start = [1, sval])
+      
+      do i=1,indexing%NSolar
+         write(input_num,"(i4)") indexing%Y_Id(indexing%YSolar(i))
+         
+         input_dummy='cloud_albedo_in_channel_no_'//trim(adjustl(input_num))
+         call ncdf_read_packed_array(ncid, input_dummy, &
+              input_data%cloud_albedo(:,:,i), start = [1, sval])
+         
+         input_dummy='cloud_albedo_uncertainty_in_channel_no_'// &
+              trim(adjustl(input_num))
+         call ncdf_read_packed_array(ncid, input_dummy, &
+              input_data%cloud_albedo_uncertainty(:,:,i), &
+              start = [1, sval])
+      end do
+      
+      do i=1,indexing%NThermal
+         write(input_num,"(i4)") indexing%Y_Id(indexing%YThermal(i))
+         
+         input_dummy='cee_in_channel_no_'//trim(adjustl(input_num))
+         call ncdf_read_packed_array(ncid, input_dummy, &
+              input_data%cee(:,:,i), start = [1, sval])
+         
+         input_dummy='cee_uncertainty_in_channel_no_'//trim(adjustl(input_num))
+         call ncdf_read_packed_array(ncid, input_dummy, &
+              input_data%cee_uncertainty(:,:,i), start = [1, sval])
+      end do
+   end if
 
-      input_dummy='cee_in_channel_no_'//trim(adjustl(input_num))
-      call ncdf_read_packed_array(ncid, input_dummy, &
-           input_data%cee(:,:,i), start = [1, sval])
-
-      input_dummy='cee_uncertainty_in_channel_no_'//trim(adjustl(input_num))
-      call ncdf_read_packed_array(ncid, input_dummy, &
-           input_data%cee_uncertainty(:,:,i), start = [1, sval])
-   end do
-end if
-
-if (indexing%flags%do_cloud_layer_2) then
-   call ncdf_read_packed_array(ncid, "cot2", input_data%cot2, &
-        start = [1, sval])
-   call ncdf_read_packed_array(ncid, "cot2_uncertainty", &
-        input_data%cot2_uncertainty, start = [1, sval])
-
-   call ncdf_read_packed_array(ncid, "cer2", input_data%cer2, &
-        start = [1, sval])
-   call ncdf_read_packed_array(ncid, "cer2_uncertainty", &
-        input_data%cer2_uncertainty, start = [1, sval])
-
-   call ncdf_read_packed_array(ncid, "cth2", input_data%cth2, &
-        start = [1, sval])
-   call ncdf_read_packed_array(ncid, "cth2_uncertainty", &
-        input_data%cth2_uncertainty, start = [1, sval])
-
-   call ncdf_read_packed_array(ncid, "ctp2", input_data%ctp2, &
-        start = [1, sval])
-   call ncdf_read_packed_array(ncid, "ctp2_uncertainty", &
-        input_data%ctp2_uncertainty, start = [1, sval])
-
-   call ncdf_read_packed_array(ncid, "ctt2", input_data%ctt2, &
-        start = [1, sval])
-   call ncdf_read_packed_array(ncid, "ctt2_uncertainty", &
-        input_data%ctt2_uncertainty, start = [1, sval])
-
-   call ncdf_read_packed_array(ncid, "cwp2", input_data%cwp2, &
-        start = [1, sval])
-   call ncdf_read_packed_array(ncid, "cwp2_uncertainty", &
-        input_data%cwp2_uncertainty, start = [1, sval])
-end if
-
+   if (indexing%flags%do_cloud_layer_2) then
+      call ncdf_read_packed_array(ncid, "cot2", input_data%cot2, &
+           start = [1, sval])
+      call ncdf_read_packed_array(ncid, "cot2_uncertainty", &
+           input_data%cot2_uncertainty, start = [1, sval])
+      
+      call ncdf_read_packed_array(ncid, "cer2", input_data%cer2, &
+           start = [1, sval])
+      call ncdf_read_packed_array(ncid, "cer2_uncertainty", &
+           input_data%cer2_uncertainty, start = [1, sval])
+      
+      call ncdf_read_packed_array(ncid, "cth2", input_data%cth2, &
+           start = [1, sval])
+      call ncdf_read_packed_array(ncid, "cth2_uncertainty", &
+           input_data%cth2_uncertainty, start = [1, sval])
+      
+      call ncdf_read_packed_array(ncid, "ctp2", input_data%ctp2, &
+           start = [1, sval])
+      call ncdf_read_packed_array(ncid, "ctp2_uncertainty", &
+           input_data%ctp2_uncertainty, start = [1, sval])
+      
+      call ncdf_read_packed_array(ncid, "ctt2", input_data%ctt2, &
+           start = [1, sval])
+      call ncdf_read_packed_array(ncid, "ctt2_uncertainty", &
+           input_data%ctt2_uncertainty, start = [1, sval])
+      
+      call ncdf_read_packed_array(ncid, "cwp2", input_data%cwp2, &
+           start = [1, sval])
+      call ncdf_read_packed_array(ncid, "cwp2_uncertainty", &
+           input_data%cwp2_uncertainty, start = [1, sval])
+   end if
+   
+   if ( indexing%flags%do_cloud .or. &
+        (indexing%flags%do_aerosol .and. indexing%NThermal .ge. 2) ) then
+      call ncdf_read_packed_array(ncid, "stemp", input_data%stemp, &
+           start = [1, sval])
+      call ncdf_read_packed_array(ncid, "stemp_uncertainty", &
+           input_data%stemp_uncertainty, start = [1, sval])
+   end if
+   
    call ncdf_read_array(ncid, "niter", input_data%niter, &
         start = [1, sval])
    call ncdf_read_array(ncid, "costja", input_data%costja, &
@@ -524,6 +543,7 @@ subroutine read_input_primary_class(fname, input_data, indexing, costonly, &
    if (.not. costonly) then
       call read_input_primary_common(ncid, input_data, indexing, sval, verbose)
    else
+      
       call read_input_primary_cost_only(ncid, input_data, sval, verbose)
    end if
 
@@ -531,3 +551,39 @@ subroutine read_input_primary_class(fname, input_data, indexing, costonly, &
    call ncdf_close(ncid, 'read_input_primary_class()')
 
 end subroutine read_input_primary_class
+
+subroutine read_input_primary_classify(fname, input_data, indexing, read_cost, &
+     read_ctt, sval, verbose)
+
+   use orac_ncdf_m
+
+   implicit none
+
+   character(len=*),           intent(in)    :: fname
+   type(input_data_primary_t), intent(inout) :: input_data
+   type(input_indices_t),      intent(in)    :: indexing
+   logical,                    intent(in)    :: read_cost
+   logical,                    intent(in)    :: read_ctt
+   integer,                    intent(in)    :: sval
+   logical,                    intent(in)    :: verbose
+
+   integer :: ncid
+
+   if (verbose) write(*,*) 'Opening primary input file: ', trim(fname)
+   call ncdf_open(ncid, fname, 'read_input_primary_classify()')
+   
+   if (read_cost) then
+      call ncdf_read_array(ncid, "costja", input_data%costja, start = [1, sval])
+      call ncdf_read_array(ncid, "costjm", input_data%costjm, start = [1, sval])
+   end if
+
+   if (read_ctt) then
+      call ncdf_read_array(ncid, "ctt", input_data%ctt, start = [1, sval])
+   end if
+   
+   if (verbose) write(*,*) 'Closing primary input file.'
+   call ncdf_close(ncid, 'read_input_primary_class()')
+
+end subroutine read_input_primary_classify
+
+

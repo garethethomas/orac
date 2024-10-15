@@ -277,7 +277,7 @@ subroutine read_slstr_visdata(indir, inband, outarr, imager_angles, &
    ! Resample the data to the TIR grid size.
    ! Ensure that the array passed to the resampling routine is the
    ! expected size
-   call slstr_resample_vis_to_tir(data1(1:nx*2,1:ny*2), outarr, &
+   call slstr_resample_vis_to_tir(data1(1:nx*2, 1:ny*2), outarr, &
         nx, ny, sreal_fill_value)
 
    ! Convert from radiances to reflectances

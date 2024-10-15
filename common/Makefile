@@ -18,6 +18,8 @@ COMMON_OBJ_F90 = $(OBJS)/chunk_utils.o \
                  $(OBJS)/common_constants.o \
                  $(OBJS)/constants_cloud_typing_pavolonis.o \
                  $(OBJS)/global_attributes.o \
+		 $(OBJS)/boxcar_smooth.o \
+		 $(OBJS)/morphology.o \
                  $(OBJS)/interpol.o \
                  $(OBJS)/hdf.o \
                  $(OBJS)/orac_indexing.o \
@@ -63,7 +65,8 @@ liborac_common.a: $(COMMON_OBJ) Makefile
 
 # Small program to report the full version number of RTTOV used
 rttov_version: $(OBJS)/rttov_version.o
-	$(F90) -o rttov_version $(INC) $(LFLAGS) $<
+	echo Skipping rrtov_version build
+#	$(F90) -o rttov_version $(LFLAGS) $(LIBS) $<
 
 # Rebuild dependencies housed in dependencies.inc
 depend:

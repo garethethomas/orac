@@ -41,30 +41,51 @@
 ! 2017/06/22, OS: Added phase variables.
 ! 2017/07/05, AP: Add channels_used, variables_retrieved. New QC.
 ! 2018/06/08, SP: Add satellite azimuth angle to output.
+! 2023/10/10, GT: Added measurement uncertainties to secondary data
+! 2023/07/03, GT: Added aerosol-layer height and surface-temperature variables.
 !
 ! Bugs:
 ! None known.
 !-------------------------------------------------------------------------------
 
-subroutine alloc_input_data_only_cost(ind, data, empty)
+subroutine alloc_input_data_classify(ind, data, read_cost, read_ctt)
 
    implicit none
 
    type(input_indices_t),        intent(in)    :: ind
    type(input_data_primary_t),   intent(inout) :: data
-   type(input_data_secondary_t), intent(inout) :: empty
+   logical,                      intent(in)    :: read_cost
+   logical,                      intent(in)    :: read_ctt
 
-   allocate(data%costja(ind%X0:ind%X1, ind%Y0:ind%Y1))
-   data%costja = sreal_fill_value
-   allocate(data%costjm(ind%X0:ind%X1, ind%Y0:ind%Y1))
-   data%costjm = sreal_fill_value
+   if (read_cost) then
+      allocate(data%costja(ind%X0:ind%X1, ind%Y0:ind%Y1))
+      data%costja = sreal_fill_value
+      allocate(data%costjm(ind%X0:ind%X1, ind%Y0:ind%Y1))
+      data%costjm = sreal_fill_value
+   else
+      nullify(data%costja)
+      nullify(data%costjm)
+   end if
 
+   if (read_ctt) then
+      allocate(data%ctt(ind%X0:ind%X1, ind%Y0:ind%Y1))
+      data%costja = sreal_fill_value
+   else
+      nullify(data%ctt)
+   end if
+   
    nullify(data%aot550)
    nullify(data%aot550_uncertainty)
    nullify(data%aot870)
    nullify(data%aot870_uncertainty)
    nullify(data%aer)
    nullify(data%aer_uncertainty)
+   nullify(data%alp)
+   nullify(data%alp_uncertainty)
+   nullify(data%alh)
+   nullify(data%alh_uncertainty)
+   nullify(data%alt)
+   nullify(data%alt_uncertainty)
    nullify(data%rho)
    nullify(data%rho_uncertainty)
    nullify(data%swansea_s)
@@ -89,7 +110,7 @@ subroutine alloc_input_data_only_cost(ind, data, empty)
    nullify(data%cth_uncertainty)
    nullify(data%cth_corrected)
    nullify(data%cth_corrected_uncertainty)
-   nullify(data%ctt)
+   ! CTT already dealt with above..
    nullify(data%ctt_uncertainty)
    nullify(data%ctt_corrected)
    nullify(data%ctt_corrected_uncertainty)
@@ -138,38 +159,7 @@ subroutine alloc_input_data_only_cost(ind, data, empty)
    nullify(data%illum)
    nullify(data%cldtype)
 
-   nullify(empty%aot550_ap)
-   nullify(empty%aot550_fg)
-   nullify(empty%aer_ap)
-   nullify(empty%aer_fg)
-   nullify(empty%rho_ap)
-   nullify(empty%rho_fg)
-   nullify(empty%swansea_s_ap)
-   nullify(empty%swansea_s_fg)
-   nullify(empty%swansea_p_ap)
-   nullify(empty%swansea_p_fg)
-   nullify(empty%cot_ap)
-   nullify(empty%cot_fg)
-   nullify(empty%cer_ap)
-   nullify(empty%cer_fg)
-   nullify(empty%ctp_ap)
-   nullify(empty%ctp_fg)
-   nullify(empty%stemp_fg)
-   nullify(empty%stemp_ap)
-   nullify(empty%cot2_ap)
-   nullify(empty%cot2_fg)
-   nullify(empty%cer2_ap)
-   nullify(empty%cer2_fg)
-   nullify(empty%ctp2_ap)
-   nullify(empty%ctp2_fg)
-
-   nullify(empty%albedo)
-   nullify(empty%channels)
-   nullify(empty%y0)
-   nullify(empty%residuals)
-   nullify(empty%ds)
-
-end subroutine alloc_input_data_only_cost
+end subroutine alloc_input_data_classify
 
 
 subroutine alloc_input_data_primary_common(ind, data)
@@ -194,6 +184,27 @@ subroutine alloc_input_data_primary_common(ind, data)
       data%aer = sreal_fill_value
       allocate(data%aer_uncertainty(ind%X0:ind%X1, ind%Y0:ind%Y1))
       data%aer_uncertainty = sreal_fill_value
+      if (ind%NThermal .ge. 2) then
+         allocate(data%alp(ind%X0:ind%X1, ind%Y0:ind%Y1))
+         data%alp = sreal_fill_value
+         allocate(data%alp_uncertainty(ind%X0:ind%X1, ind%Y0:ind%Y1))
+         data%alp_uncertainty = sreal_fill_value
+         allocate(data%alh(ind%X0:ind%X1, ind%Y0:ind%Y1))
+         data%alh = sreal_fill_value
+         allocate(data%alh_uncertainty(ind%X0:ind%X1, ind%Y0:ind%Y1))
+         data%alh_uncertainty = sreal_fill_value
+         allocate(data%alt(ind%X0:ind%X1, ind%Y0:ind%Y1))
+         data%alt = sreal_fill_value
+         allocate(data%alt_uncertainty(ind%X0:ind%X1, ind%Y0:ind%Y1))
+         data%alt_uncertainty = sreal_fill_value
+      else
+         nullify(data%alp)
+         nullify(data%alp_uncertainty)
+         nullify(data%alh)
+         nullify(data%alh_uncertainty)
+         nullify(data%alt)
+         nullify(data%alt_uncertainty)
+      end if
    else
       nullify(data%aot550)
       nullify(data%aot550_uncertainty)
@@ -201,6 +212,12 @@ subroutine alloc_input_data_primary_common(ind, data)
       nullify(data%aot870_uncertainty)
       nullify(data%aer)
       nullify(data%aer_uncertainty)
+      nullify(data%alp)
+      nullify(data%alp_uncertainty)
+      nullify(data%alh)
+      nullify(data%alh_uncertainty)
+      nullify(data%alt)
+      nullify(data%alt_uncertainty)
    end if
 
    if (ind%flags%do_rho) then
@@ -265,11 +282,6 @@ subroutine alloc_input_data_primary_common(ind, data)
       allocate(data%cc_total_uncertainty(ind%X0:ind%X1, ind%Y0:ind%Y1))
       data%cc_total_uncertainty = sreal_fill_value
 
-      allocate(data%stemp(ind%X0:ind%X1, ind%Y0:ind%Y1))
-      data%stemp = sreal_fill_value
-      allocate(data%stemp_uncertainty(ind%X0:ind%X1, ind%Y0:ind%Y1))
-      data%stemp_uncertainty = sreal_fill_value
-
       allocate(data%cth(ind%X0:ind%X1, ind%Y0:ind%Y1))
       data%cth = sreal_fill_value
       allocate(data%cth_uncertainty(ind%X0:ind%X1, ind%Y0:ind%Y1))
@@ -317,8 +329,6 @@ subroutine alloc_input_data_primary_common(ind, data)
       nullify(data%ctp_corrected_uncertainty)
       nullify(data%cc_total)
       nullify(data%cc_total_uncertainty)
-      nullify(data%stemp)
-      nullify(data%stemp_uncertainty)
       nullify(data%cth)
       nullify(data%cth_uncertainty)
       nullify(data%cth_corrected)
@@ -378,6 +388,17 @@ subroutine alloc_input_data_primary_common(ind, data)
       nullify(data%ctt2_uncertainty)
       nullify(data%cwp2)
       nullify(data%cwp2_uncertainty)
+   end if
+
+   if ( ind%flags%do_cloud .or. &
+        (ind%flags%do_aerosol .and. ind%NThermal .ge. 2) ) then
+      allocate(data%stemp(ind%X0:ind%X1, ind%Y0:ind%Y1))
+      data%stemp = sreal_fill_value
+      allocate(data%stemp_uncertainty(ind%X0:ind%X1, ind%Y0:ind%Y1))
+      data%stemp_uncertainty = sreal_fill_value
+   else
+      nullify(data%stemp)
+      nullify(data%stemp_uncertainty)
    end if
 
    allocate(data%niter(ind%X0:ind%X1, ind%Y0:ind%Y1))
@@ -548,11 +569,23 @@ subroutine alloc_input_data_secondary_common(ind, data)
       data%aer_ap = sreal_fill_value
       allocate(data%aer_fg(ind%X0:ind%X1, ind%Y0:ind%Y1))
       data%aer_fg = sreal_fill_value
+
+      if (ind%NThermal .ge. 2) then
+         allocate(data%alp_ap(ind%X0:ind%X1, ind%Y0:ind%Y1))
+         data%alp_ap = sreal_fill_value
+         allocate(data%alp_fg(ind%X0:ind%X1, ind%Y0:ind%Y1))
+         data%alp_fg = sreal_fill_value
+      else
+         nullify(data%alp_ap)
+         nullify(data%alp_fg)
+      end if
    else
       nullify(data%aot550_ap)
       nullify(data%aot550_fg)
       nullify(data%aer_ap)
       nullify(data%aer_fg)
+      nullify(data%alp_ap)
+      nullify(data%alp_fg)
    end if
 
    if (ind%flags%do_rho) then
@@ -636,6 +669,24 @@ subroutine alloc_input_data_secondary_common(ind, data)
       nullify(data%cer2_fg)
       nullify(data%ctp2_ap)
       nullify(data%ctp2_fg)
+   end if
+
+   if ( ind%flags%do_cloud .or. &
+        (ind%flags%do_aerosol .and. ind%NThermal .ge. 2) ) then
+      allocate(data%stemp_ap(ind%X0:ind%X1, ind%Y0:ind%Y1))
+      data%stemp_ap = sreal_fill_value
+      allocate(data%stemp_fg(ind%X0:ind%X1, ind%Y0:ind%Y1))
+      data%stemp_fg = sreal_fill_value
+   else
+      nullify(data%stemp_ap)
+      nullify(data%stemp_fg)
+   end if
+
+   if (ind%flags%do_meas_error) then
+      allocate(data%Sy(ind%X0:ind%X1, ind%Y0:ind%Y1, ind%Ny))
+      data%Sy = sreal_fill_value
+   else
+      nullify(data%Sy)
    end if
 
    allocate(data%y0(ind%X0:ind%X1, ind%Y0:ind%Y1, ind%Ny))

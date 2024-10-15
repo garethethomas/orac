@@ -425,11 +425,11 @@ subroutine get_abi_solgeom(imager_time, imager_angles, imager_geolocation, verbo
    tmphr = (tmphr-ihr)*60.
    minu = int(tmphr)
 
-   call get_day_of_year(float(idy), float(mon), float(iye), doy)
+   call get_day_of_year(float(int(idy)), float(int(mon)), float(int(iye)), doy)
 
-   rye = float(iye)
-   rhr = float(ihr)
-   rminu = float(minu)
+   rye = float(int(iye))
+   rhr = float(int(ihr))
+   rminu = float(int(minu))
 
    ! This section computes the solar geometry for each pixel in the image
 #ifdef _OPENMP
@@ -570,20 +570,19 @@ subroutine load_abi_band(infile, imager_geolocation, rad, kappa, bc1, bc2, fk1, 
 
    character(len=*),           intent(in) :: infile
    type(imager_geolocation_t), intent(in) :: imager_geolocation
-   real,       intent(out) :: rad(:, :)
-   real,       intent(out) :: kappa
-   real,       intent(out) :: bc1
-   real,       intent(out) :: bc2
-   real,       intent(out) :: fk1
-   real,       intent(out) :: fk2
-   integer,    intent(in)  :: scl
-   logical,    intent(in)  :: verbose
+   real,       intent(out)                :: rad(:, :)
+   real,       intent(out)                :: kappa
+   real,       intent(out)                :: bc1
+   real,       intent(out)                :: bc2
+   real,       intent(out)                :: fk1
+   real,       intent(out)                :: fk2
+   integer,    intent(in)                 :: scl
+   logical,    intent(in)                 :: verbose
 
-   byte, allocatable       :: dqf(:,:)
+   integer(kind=1), allocatable           :: dqf(:,:)
 
-
-   integer  :: fid
-   integer  :: x0, x1, y0, y1, nx, ny
+   integer                                :: fid
+   integer                                :: x0, x1, y0, y1, nx, ny
 
    rad(:, :) = sreal_fill_value
    kappa  = sreal_fill_value
@@ -650,7 +649,7 @@ subroutine get_abi_time(infile, imager_time, ny, verbose)
    real(kind=dreal)           :: dfrac1, dfrac2, jd1, jd2, slo
 
    character(len=var_length), parameter :: date_format = &
-        '(I4, X, I2, X, I2, X, I2, X, I2, X, I2)'
+        '(I4, 1X, I2, 1X, I2, 1X, I2, 1X, I2, 1X, I2)'
 
    if (verbose) write(*,*) '<<<<<<<<<<<<<<< Entering get_abi_time()'
 
@@ -679,10 +678,10 @@ subroutine get_abi_time(infile, imager_time, ny, verbose)
    call GREG2JD(year2, month2, day2, jd2)
 
    ! Add on a fraction to account for the start / end times
-   dfrac1 = (float(hour1)/24.0) + (float(minute1)/(24.0*60.0)) + &
-        (float(second1)/(24.0*60.0*60.0))
-   dfrac2 = (float(hour2)/24.0) + (float(minute2)/(24.0*60.0)) + &
-        (float(second2)/(24.0*60.0*60.0))
+   dfrac1 = (float(int(hour1))/24.0) + (float(int(minute1))/(24.0*60.0)) + &
+        (float(int(second1))/(24.0*60.0*60.0))
+   dfrac2 = (float(int(hour2))/24.0) + (float(int(minute2))/(24.0*60.0)) + &
+        (float(int(second2))/(24.0*60.0*60.0))
    jd1    = jd1 + dfrac1
    jd2    = jd2 + dfrac2
 

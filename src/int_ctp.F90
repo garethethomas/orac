@@ -111,7 +111,6 @@ subroutine Int_CTP(SPixel, Ctrl, BT, CTP, status)
    ! Search for temperature inversions within the troposphere, starting
    ! at the lowest *atmospheric* level we can extrapolate from.
    k = nz-2
-
    ! Ignore surface inversion (as there isn't an obvious way to remove them)
    do while (t(k-1) > t(k) .and. k > 1)
       k = k-1

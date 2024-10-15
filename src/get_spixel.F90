@@ -192,6 +192,9 @@
 !    surface reflectance.
 ! 2022/01/27, GT: Added MSI_Data as an argument to Get_X (needed if using
 !    SelmAUX to set a priori/first guess)
+! 2023/10/01, GT: Added some initial zeroing of channel counts, so that if the
+!    current pixel is skipped, it is apparent that SPixel data is not valid for
+!    the current pixel.
 !
 ! Bugs:
 ! None known.
@@ -221,12 +224,20 @@ subroutine Get_SPixel(Ctrl, SAD_Chan, SAD_LUT, MSI_Data, RTM, SPixel, status)
 
    ! Define local variables
 
-   integer :: i
+   integer :: i, ii
    integer :: ictrl, ispix, itherm, isolar
 
    status = 0
 
    SPixel%Type = MSI_Data%Type(SPixel%Loc%X0, SPixel%Loc%Y0)
+
+   ! Redefine some key SPixel%Ind values here, so that _if_ the current
+   ! pixel is skipped, it is apparent that the data contained within
+   ! SPixel is not valid for the current pixel
+   SPixel%Ind%Ny = 0
+   SPixel%Ind%NSolar = 0
+   SPixel%INd%NThermal = 0 
+   SPixel%Ind%NMixed = 0
 
    if (Ctrl%NTypes_to_process > 0) then
       if (.not. any(Ctrl%Types_to_process(1:Ctrl%NTypes_to_process) == &
@@ -236,6 +247,7 @@ subroutine Get_SPixel(Ctrl, SAD_Chan, SAD_LUT, MSI_Data, RTM, SPixel, status)
 #ifdef DEBUG
          write(*, *) 'WARNING: Get_SPixel(): Incorrect particle type in  ' // &
                      'pixel starting at:', SPixel%Loc%X0, SPixel%Loc%Y0
+         write(*,*)  'Type: ',SPixelType
 #endif
          go to 99 ! Skip further data reading
       end if
@@ -262,8 +274,8 @@ subroutine Get_SPixel(Ctrl, SAD_Chan, SAD_LUT, MSI_Data, RTM, SPixel, status)
          call Get_Surface_Swansea(Ctrl, SPixel, SAD_LUT(1), MSI_Data)
       else
          call Get_Surface(Ctrl, SAD_Chan, SPixel, MSI_Data, status)
-         if (status /= 0) go to 99 ! Skip further data reading
       end if
+      if (status /= 0) go to 99 ! Skip further data reading
 
       ! Set the solar constant for the solar channels used in this SPixel.
       deallocate(SPixel%f0)
@@ -290,7 +302,8 @@ subroutine Get_SPixel(Ctrl, SAD_Chan, SAD_LUT, MSI_Data, RTM, SPixel, status)
       if (status /= 0) go to 99 ! Skip further data reading
 
       ! Reduce reflectance by solar angle effect.
-      if (SPixel%Ind%NSolar > 0) then
+      if ((SPixel%Ind%NSolar > 0) .and. &
+          (Ctrl%RTMIntSelmSW /= RTMIntMethNone)) then
          ! Calculate transmittances along the slant paths (solar and viewing)
          ! Pick up the "purely solar" channel values from the SW RTM, and the
          ! mixed channels from the LW RTM.
@@ -336,11 +349,46 @@ subroutine Get_SPixel(Ctrl, SAD_Chan, SAD_LUT, MSI_Data, RTM, SPixel, status)
 
          ! Gradient of Ref_clear w.r.t. surface albedo
          SPixel%RTM%dRef_clear_dRs = SPixel%RTM%Tsf_o * SPixel%RTM%Tsf_v
+      else if (SPixel%Ind%NSolar > 0) then
+         deallocate(SPixel%RTM%Ref_clear)
+         allocate(SPixel%RTM%Ref_clear     (SPixel%Ind%NSolar))
+         deallocate(SPixel%RTM%dRef_clear_dRs)
+         allocate(SPixel%RTM%dRef_clear_dRs(SPixel%Ind%NSolar))
+         SPixel%RTM%Ref_clear      = 0.
+         SPixel%RTM%dRef_clear_dRs = 0.
       end if ! End of NSolar > 0
    end if ! End of RTMIntMeth /= RTMIntMethNone
 
+   ! Set surface emissivity, on the measurement grid, if needed
+   if (SPixel%Ind%NThermal > 0) then
+      ! Reallocate surface emissivities to appropriate length
+      deallocate(SPixel%Surface%Emis)
+      allocate(SPixel%Surface%Emis(SPixel%Ind%NThermal))
+      ! Over sea, use the emis value from the RTM grid, while the
+      ! full resolution data from the ALB input file is used over
+      ! land.
+      if (SPixel%Surface%Land) then
+         do i = 1, SPixel%Ind%NThermal
+            ii = SPixel%spixel_y_thermal_to_ctrl_y_thermal_index(i)
+            SPixel%Surface%Emis(i) = &
+                 MSI_Data%surf_emis(SPixel%Loc%X0, SPixel%Loc%Y0, ii)
+         end do
+      else
+         SPixel%Surface%Emis(:) = SPixel%RTM%LW%Ems(:)
+      end if
+   end if
+
    call Get_X(Ctrl, SPixel, MSI_Data, status)
 !  if (status /= 0) go to 99 ! Skip further data reading
+   ! It seems that it is possible that an invalid pixel, with no
+   ! defined measurement, can reach this point without causing a
+   ! SPixel status. Check for this condition here
+   if (SPixel%Ind%Ny == 0) then
+#ifdef DEBUG
+      write(*,*) 'WARNING: Get_SPixel() No SPixel defined'
+#endif
+      status = SPixelSkip
+   end if
 
    ! If stat indicates a "super-pixel fatal" condition set the quality
    ! control flag bit to indicate no processing.

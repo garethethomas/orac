@@ -33,6 +33,7 @@
 ! 2017/06/21, OS: added ann phase variables
 ! 2018/06/08, SP: Add satellite azimuth angle to output.
 ! 2022/01/27, GT: Added CTP prior data.
+! 2024/10/01, GT: Added surf_emis data array.
 !
 ! Bugs:
 ! None known.
@@ -56,6 +57,8 @@ subroutine Dealloc_Data(Ctrl, MSI_Data)
       if (associated(MSI_Data%rho_dv))    deallocate(MSI_Data%rho_dv)
       if (associated(MSI_Data%rho_dd))    deallocate(MSI_Data%rho_dd)
    end if
+
+   if (associated(MSI_Data%surf_emis))    deallocate(MSI_Data%surf_emis)
 
    if (associated(MSI_Data%Type))         deallocate(MSI_Data%Type)
    if (associated(MSI_Data%cldtype))      deallocate(MSI_Data%cldtype)

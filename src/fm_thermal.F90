@@ -69,6 +69,9 @@
 !    derivative wrt surface temperature was using the top level to TOA
 !    transmittance when it should have been using the surface (bottom level) to
 !    TOA transmittance.
+! 2024/03/20, GT: Added code to deal with aerosol in the thermal. This
+!    essentially means removing the mixing of clear-sky and cloud pixel
+!    fractions (i.e. no cloud fraction) when dealing with aerosol.
 !
 ! Bugs:
 ! None known.
@@ -198,6 +201,7 @@ subroutine FM_Thermal(Ctrl, SAD_LUT, SPixel, SAD_Chan, RTM_Pc, X, GZero, BT, &
    integer :: Thermal(SPixel%Ind%NThermal)
    real    :: delta_Ts
    real    :: f2
+   real    :: psuedo_Fr
    real    :: a(SPixel%Ind%NThermal)
    real    :: b(SPixel%Ind%NThermal)
    real    :: c(SPixel%Ind%NThermal)
@@ -239,7 +243,10 @@ subroutine FM_Thermal(Ctrl, SAD_LUT, SPixel, SAD_Chan, RTM_Pc, X, GZero, BT, &
    delta_Ts = X(ITs) - SPixel%RTM%T(SPixel%RTM%Np)
 
    ! Calculate product dB_dTs * SPixel%RTM%LW%Ems (for efficiency)
-   Es_dB_dTs = SPixel%RTM%LW%dB_dTs(Thermal) * SPixel%RTM%LW%Ems(Thermal)
+   !Es_dB_dTs = SPixel%RTM%LW%dB_dTs(Thermal) * SPixel%RTM%LW%Ems(Thermal)
+   ! Using full resolution Emissivity...
+   Es_dB_dTs = SPixel%RTM%LW%dB_dTs(Thermal) * SPixel%Surface%Emis(Thermal)
+   
 
    ! Update clear radiances at each RTM pressure level
    R_clear = SPixel%RTM%LW%R_clear(Thermal) + &
@@ -255,12 +262,25 @@ if (Ctrl%Approach .ne. AppCld2L) then
              RTM_Pc(1)%LW%Rac_dwn(Thermal) * CRP(:,IR_dv)) * &
              RTM_Pc(1)%LW%Tac(Thermal) + RTM_Pc(1)%LW%Rac_up(Thermal)
 
-   ! Calculate partly cloudy radiances at TOA (a linear combination of R_clear
-   ! and R_over)
-   R = X(IFr) * R_over + (1.0 - X(IFr)) * R_clear
+   ! Deal with cloud-fraction which, of course, will be different for aerosol
+   ! and cloud pixels:
+   ! For cloud, we allow partially filled pixels
+   ! For aerosol, we only consider completely cloud-free pixels
+   if (Ctrl%Approach .eq. AppCld1L) then
+      ! Calculate partly cloudy radiances at TOA (a linear combination of R_clear
+      ! and R_over)
+      R = X(IFr) * R_over + (1.0 - X(IFr)) * R_clear
 
-   ! Calculate product X%frac*Tac (for efficiency)
-   fTac = X(IFr) * RTM_Pc(1)%LW%Tac(Thermal)
+      ! Calculate product X%frac*Tac (for efficiency)
+      fTac = X(IFr) * RTM_Pc(1)%LW%Tac(Thermal)
+
+      ! Place holder for X(IFr)
+      psuedo_Fr = X(IFr)
+   else
+      R = R_over
+      fTac = RTM_Pc(1)%LW%Tac(Thermal)
+      psuedo_Fr = 1.0
+   end if
 
    ! Calculate radiance gradients
 
@@ -275,11 +295,12 @@ if (Ctrl%Approach .ne. AppCld2L) then
                         RTM_Pc(1)%LW%Rac_dwn(Thermal) * d_CRP(:,IR_dv,IRe))
 
    ! Gradient w.r.t. cloud pressure, Pc
-   d_R(:,IPc) = X(IFr) * (RTM_Pc(1)%LW%dTac_dPc(Thermal) * &
-                          (RTM_Pc(1)%LW%Rbc_up(Thermal)  * CRP(:,IT_dv) + &
-                           RTM_Pc(1)%LW%B(Thermal)       * CRP(:,IEm) + &
-                           RTM_Pc(1)%LW%Rac_dwn(Thermal) * CRP(:,IR_dv)) + &
-                          RTM_Pc(1)%LW%dRac_up_dPc(Thermal)) &
+   
+   d_R(:,IPc) = psuedo_Fr * (RTM_Pc(1)%LW%dTac_dPc(Thermal) * &
+                             (RTM_Pc(1)%LW%Rbc_up(Thermal)  * CRP(:,IT_dv) + &
+                              RTM_Pc(1)%LW%B(Thermal)       * CRP(:,IEm) + &
+                              RTM_Pc(1)%LW%Rac_dwn(Thermal) * CRP(:,IR_dv)) + &
+                             RTM_Pc(1)%LW%dRac_up_dPc(Thermal)) &
               + fTac * (RTM_Pc(1)%LW%dRbc_up_dPc(Thermal)  * CRP(:,IT_dv) + &
                         RTM_Pc(1)%LW%dB_dPc(Thermal)       * CRP(:,IEm) + &
                         RTM_Pc(1)%LW%dRac_dwn_dPc(Thermal) * CRP(:,IR_dv))
@@ -288,8 +309,12 @@ if (Ctrl%Approach .ne. AppCld2L) then
    d_R(:,IFr) = R_over - R_clear
 
    ! Gradient w.r.t. surface temperature, Ts
-   d_R(:,ITs) = fTac * Es_dB_dTs * RTM_Pc(1)%LW%Tbc(Thermal) * CRP(:,IT_dv) + &
-      (1.0 - X(IFr)) * Es_dB_dTs * SPixel%RTM%LW%Tsf(Thermal)
+   ! Component common between cloud and aerosol:
+   d_R(:,ITs) = fTac * Es_dB_dTs * RTM_Pc(1)%LW%Tbc(Thermal) * CRP(:,IT_dv)
+   ! Add on fractional clear-sky component for cloud:
+   if (Ctrl%Approach .eq. AppCld1L) &
+         d_R(:,ITs) = d_R(:,ITs) + &
+         (1.0 - X(IFr)) * Es_dB_dTs * SPixel%RTM%LW%Tsf(Thermal)
 else
    ! Update below cloud radiance after interpolation to Pc
    RTM_Pc(2)%LW%Rbc_up(Thermal) = RTM_Pc(2)%LW%Rbc_up(Thermal) + &

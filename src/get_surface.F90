@@ -519,8 +519,11 @@ subroutine Get_Surface_Swansea(Ctrl, SPixel, SAD_LUT, MSI_Data)
       SPixel%Surface%Sw_p = 0
       SPixel%Surface%Sw_p_var = 0
    end if
-   deallocate(SPixel%Surface%XIndex)
-   allocate(SPixel%Surface%XIndex(SPixel%Ind%NSolar, MaxSwan_X))
+   if ((size(SPixel%Surface%XIndex, 1) /= SPixel%Ind%NSolar) .and. &
+       (size(SPixel%Surface%XIndex, 1) /= MaxSwan_X)) then
+      deallocate(SPixel%Surface%XIndex)
+      allocate(SPixel%Surface%XIndex(SPixel%Ind%NSolar, MaxSwan_X))
+   end if
    SPixel%Surface%XIndex = 0
 
    if (Ctrl%RS%RsSelm == SelmMeas) then

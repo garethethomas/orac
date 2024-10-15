@@ -36,6 +36,7 @@
 ! 2015/06/02, AP: Add aerosol fields.
 ! 2015/08/19, AP: Make reading of RTM terms optional.
 ! 2018/06/08, SP: Add satellite azimuth angle to output.
+! 2024/10/01, GT: Add SPixel%Surface%Emis
 !
 ! Bugs:
 ! None known.
@@ -109,6 +110,7 @@ subroutine Dealloc_SPixel(Ctrl, SPixel)
       deallocate(SPixel%Surface%Ratios)
    end if
    deallocate(SPixel%Surface%XIndex)
+   deallocate(SPixel%Surface%Emis)
 
    !  Solar constant
 

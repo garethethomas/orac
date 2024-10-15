@@ -39,6 +39,8 @@
 ! 2017/06/22, OS: Added phase variables.
 ! 2017/07/05, AP: Add channels_used, variables_retrieved. New QC.
 ! 2018/06/08, SP: Add satellite azimuth angle to output.
+! 2023/10/10, GT: Added measurement uncertainties to secondary data
+! 2024/07/03, GT: Added aerosol-layer height variables.
 !
 ! Bugs:
 ! None known.
@@ -59,6 +61,16 @@ subroutine dealloc_input_data_primary_common(data)
    if (associated(data%aer))           deallocate(data%aer)
    if (associated(data%aer_uncertainty)) &
                                        deallocate(data%aer_uncertainty)
+
+   if (associated(data%alp))           deallocate(data%alp)
+   if (associated(data%alp_uncertainty)) &
+                                       deallocate(data%alp_uncertainty)
+   if (associated(data%alh))           deallocate(data%alh)
+   if (associated(data%alh_uncertainty)) &
+                                       deallocate(data%alh_uncertainty)
+   if (associated(data%alt))           deallocate(data%alt)
+   if (associated(data%alt_uncertainty)) &
+                                       deallocate(data%alt_uncertainty)
 
    if (associated(data%rho))           deallocate(data%rho)
    if (associated(data%rho_uncertainty)) &
@@ -196,6 +208,18 @@ subroutine dealloc_input_data_primary_class(data)
 end subroutine dealloc_input_data_primary_class
 
 
+subroutine dealloc_input_data_primary_classify(data)
+
+   implicit none
+
+   type(input_data_primary_t), intent(inout) :: data
+
+   call dealloc_input_data_primary_common(data)
+
+end subroutine dealloc_input_data_primary_classify
+
+
+
 subroutine dealloc_input_data_secondary_common(data)
 
    implicit none
@@ -206,7 +230,8 @@ subroutine dealloc_input_data_secondary_common(data)
    if (associated(data%aot550_fg))     deallocate(data%aot550_fg)
    if (associated(data%aer_ap))        deallocate(data%aer_ap)
    if (associated(data%aer_fg))        deallocate(data%aer_fg)
-
+   if (associated(data%alp_ap))        deallocate(data%alp_ap)
+   if (associated(data%alp_fg))        deallocate(data%alp_fg)
    if (associated(data%rho_ap))        deallocate(data%rho_ap)
    if (associated(data%rho_fg))        deallocate(data%rho_fg)
 
@@ -232,7 +257,7 @@ subroutine dealloc_input_data_secondary_common(data)
    if (associated(data%ctp2_ap))       deallocate(data%ctp2_ap)
    if (associated(data%ctp2_fg))       deallocate(data%ctp2_fg)
 
-
+   if (associated(data%Sy))            deallocate(data%Sy)
    if (associated(data%y0))            deallocate(data%y0)
    if (associated(data%residuals))     deallocate(data%residuals)
    if (associated(data%ds))            deallocate(data%ds)
@@ -264,3 +289,4 @@ subroutine dealloc_input_data_secondary_class(data)
    call dealloc_input_data_secondary_common(data)
 
 end subroutine dealloc_input_data_secondary_class
+

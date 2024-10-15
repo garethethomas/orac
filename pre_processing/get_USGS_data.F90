@@ -19,6 +19,8 @@
 !    not replacing the existing imager_flags%lsflag with DEM values
 ! 2017/02/11, SP: Allow reading LSM, LUM, DEM from external file (ExtWork)
 ! 2020/12/02, DP: Check if USGS file is upright (lat starts positive) or not
+! 2024/07/26, GT: Renamed module "pavolonis_constants_m", as previous name
+!    violated fortran variable name length limits
 !
 ! Bugs:
 ! None known.
@@ -28,7 +30,7 @@ subroutine get_USGS_data(path_to_USGS_file, imager_flags, imager_geolocation, &
      usgs, assume_full_paths, use_l1_land_mask, source_atts, use_predef_lsm, &
      sensor, verbose)
 
-   use constants_cloud_typing_pavolonis_m
+   use pavolonis_constants_m
    use imager_structures_m
    use orac_ncdf_m
    use source_attributes_m

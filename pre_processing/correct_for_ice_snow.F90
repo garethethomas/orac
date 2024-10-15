@@ -92,6 +92,8 @@
 ! 2016/02/18, OS: ECMWF snow/ice mask now corrected by USGS land/sea mask
 ! 2016/02/23, OS: previous commit on ECMWF snow/ice mask was incomplete
 ! 2018/10/01, SP: Introduce a more comprehensive snow albedo dataset
+! 2024/07/26, GT: Renamed module "pavolonis_constants_m", as previous name
+!    violated fortran variable name length limits
 !
 ! Bugs:
 ! None known.
@@ -496,7 +498,7 @@ subroutine apply_ice_correction(x, y, nise, ice_albedo, snow_albedo, &
      pixel_ref, channel_info, nise_mask_flag, applied_flag)
 
    use channel_structures_m
-   use constants_cloud_typing_pavolonis_m
+   use pavolonis_constants_m
    use interpol_m
    use preproc_constants_m
    use preproc_structures_m
@@ -590,7 +592,7 @@ subroutine correct_for_ice_snow_nwp(nwp_path, imager_geolocation, &
      include_full_brdf, source_atts, verbose)
 
    use channel_structures_m
-   use constants_cloud_typing_pavolonis_m
+   use pavolonis_constants_m
    use imager_structures_m
    use preproc_constants_m
    use preproc_structures_m

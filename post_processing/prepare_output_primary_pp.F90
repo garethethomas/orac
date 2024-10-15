@@ -39,6 +39,8 @@
 ! 2017/01/09, CP: ML additions.
 ! 2017/07/05, AP: Add channels_used, variables_retrieved. New QC.
 ! 2018/06/08, SP: Add satellite azimuth angle to output.
+! 2024/07/26, GT: constants_cloud_typing_pavolonis_m module now named
+!    pavolonis_constants_m
 !
 ! Bugs:
 ! None known.
@@ -48,7 +50,7 @@ subroutine prepare_output_primary_pp(i, j, indexing, input_data, output_data, &
      output_optical_props_at_night)
 
 
-   use constants_cloud_typing_pavolonis_m
+   use pavolonis_constants_m
    use orac_input_m
    use orac_ncdf_m
    use orac_output_m
@@ -161,6 +163,56 @@ subroutine prepare_output_primary_pp(i, j, indexing, input_data, output_data, &
            output_data%aer_uncertainty_vmin, &
            output_data%aer_uncertainty_vmax, &
            sreal_fill_value, output_data%aer_uncertainty_vmax)
+      
+      !-------------------------------------------------------------------------
+      ! aerosol layer height variables
+      !-------------------------------------------------------------------------
+      if (indexing%NThermal .ge. 2) then
+         call prepare_short_packed_float( &
+              input_data%alp(i,j), output_data%alp(i,j), &
+              output_data%alp_scale, output_data%alp_offset, &
+              output_data%alp_vmin, output_data%alp_vmax, &
+              sreal_fill_value, output_data%alp_vmax)
+         
+         call prepare_short_packed_float( &
+              input_data%alp_uncertainty(i,j), &
+              output_data%alp_uncertainty(i,j), &
+              output_data%alp_uncertainty_scale, &
+              output_data%alp_uncertainty_offset, &
+              output_data%alp_uncertainty_vmin, &
+              output_data%alp_uncertainty_vmax, &
+              sreal_fill_value, output_data%alp_uncertainty_vmax)
+
+         call prepare_short_packed_float( &
+              input_data%alh(i,j), output_data%alh(i,j), &
+              output_data%alh_scale, output_data%alh_offset, &
+              output_data%alh_vmin, output_data%alh_vmax, &
+              sreal_fill_value, output_data%alh_vmax)
+
+         call prepare_short_packed_float( &
+              input_data%alh_uncertainty(i,j), &
+              output_data%alh_uncertainty(i,j), &
+              output_data%alh_uncertainty_scale, &
+              output_data%alh_uncertainty_offset, &
+              output_data%alh_uncertainty_vmin, &
+              output_data%alh_uncertainty_vmax, &
+              sreal_fill_value, output_data%alh_uncertainty_vmax)
+
+         call prepare_short_packed_float( &
+              input_data%alt(i,j), output_data%alt(i,j), &
+              output_data%alt_scale, output_data%alt_offset, &
+              output_data%alt_vmin, output_data%alt_vmax, &
+              sreal_fill_value, output_data%alt_vmax)
+
+         call prepare_short_packed_float( &
+              input_data%alt_uncertainty(i,j), &
+              output_data%alt_uncertainty(i,j), &
+              output_data%alt_uncertainty_scale, &
+              output_data%alt_uncertainty_offset, &
+              output_data%alt_uncertainty_vmin, &
+              output_data%alt_uncertainty_vmax, &
+              sreal_fill_value, output_data%alt_uncertainty_vmax)
+      end if
    end if
 
    if (indexing%flags%do_rho) then
@@ -376,24 +428,6 @@ subroutine prepare_output_primary_pp(i, j, indexing, input_data, output_data, &
            output_data%cc_total_uncertainty_vmin, &
            output_data%cc_total_uncertainty_vmax, &
            sreal_fill_value, output_data%cc_total_uncertainty_vmax)
-
-      !-------------------------------------------------------------------------
-      ! stemp, stemp_uncertainty
-      !-------------------------------------------------------------------------
-      call prepare_short_packed_float( &
-           input_data%stemp(i,j), output_data%stemp(i,j), &
-           output_data%stemp_scale, output_data%stemp_offset, &
-           output_data%stemp_vmin, output_data%stemp_vmax, &
-           sreal_fill_value, output_data%stemp_vmax)
-
-      call prepare_short_packed_float( &
-           input_data%stemp_uncertainty(i,j), &
-           output_data%stemp_uncertainty(i,j), &
-           output_data%stemp_uncertainty_scale, &
-           output_data%stemp_uncertainty_offset, &
-           output_data%stemp_uncertainty_vmin, &
-           output_data%stemp_uncertainty_vmax, &
-           sreal_fill_value, output_data%stemp_uncertainty_vmax)
 
       !-------------------------------------------------------------------------
       ! cth, cth_uncertainty
@@ -635,6 +669,26 @@ subroutine prepare_output_primary_pp(i, j, indexing, input_data, output_data, &
            sreal_fill_value, output_data%ctt_uncertainty_vmax)
    end if
 
+   !-------------------------------------------------------------------------
+   ! stemp, stemp_uncertainty
+   !-------------------------------------------------------------------------
+   if ( indexing%flags%do_cloud .or. &
+        (indexing%flags%do_aerosol .and. indexing%NThermal .ge. 2) ) then
+      call prepare_short_packed_float( &
+           input_data%stemp(i,j), output_data%stemp(i,j), &
+           output_data%stemp_scale, output_data%stemp_offset, &
+           output_data%stemp_vmin, output_data%stemp_vmax, &
+           sreal_fill_value, output_data%stemp_vmax)
+
+      call prepare_short_packed_float( &
+           input_data%stemp_uncertainty(i,j), &
+           output_data%stemp_uncertainty(i,j), &
+           output_data%stemp_uncertainty_scale, &
+           output_data%stemp_uncertainty_offset, &
+           output_data%stemp_uncertainty_vmin, &
+           output_data%stemp_uncertainty_vmax, &
+           sreal_fill_value, output_data%stemp_uncertainty_vmax)
+   end if
    !----------------------------------------------------------------------------
    ! ANN phase
    !----------------------------------------------------------------------------
@@ -763,7 +817,7 @@ subroutine prepare_output_primary_pp(i, j, indexing, input_data, output_data, &
            PROB_OPAQUE_ICE_TYPE)
          output_data%phase_pavolonis(i,j) = IPhaseIce
       case default
-         output_data%phase_pavolonis(i,j) = byte_fill_value
+         output_data%phase_pavolonis(i,j) = input_data%cldtype(i,j,1)
       end select
    end if
 

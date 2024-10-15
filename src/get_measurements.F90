@@ -98,7 +98,11 @@
 !    that uses the observed radiance rather than the solar constant to convert
 !    Solar%NeHomog/Coreg from reflectance into radiance. Additionally, add
 !    Thermal%NeHomog/Coreg to IDay pixels as well.
-!
+! 2023/10/10, GT: Introduced Ctrl%use_new_meas_error as the method of switching
+!    between the old measurement uncertainty characterisation (associated with
+!    the old text-based LUTs) and the new one. Note that this doesn't affect
+!    the calculations involving NeHomog or Coreg, as the new LUTs simply don't
+!    support the SAD-file method of setting these values.
 ! Bugs:
 ! None known.
 !-------------------------------------------------------------------------------
@@ -149,8 +153,6 @@ subroutine Get_Measurements(Ctrl, SAD_Chan, SPixel, MSI_Data, status)
    status = 0
 
    ! Reallocate to the appropriate size for the SPixel and Assign SPixel values.
-   ! Use Ctrl indices for the Data array since this is populated for all
-   ! requested channels (not just those that are valid for the current SPixel).
 
    deallocate(SPixel%Ym)
    allocate(SPixel%Ym(SPixel%Ind%Ny))
@@ -185,21 +187,31 @@ subroutine Get_Measurements(Ctrl, SAD_Chan, SPixel, MSI_Data, status)
       do i = 1, SPixel%Ind%Ny
          ii = SPixel%spixel_y_to_ctrl_y_index(i)
          if (SAD_Chan(ii)%Thermal%Flag > 0) then
-            if (len_trim(Ctrl%LUTClass) == 3) then
+            if (.not. Ctrl%use_new_meas_error) then
                ! Old LUTs approach (fixed uncertainty)
                ! Note: NEBT is already squared when old LUT is read in.
                SPixel%Sy(i,i) = SAD_Chan(ii)%Thermal%NEBT
             else
                ! New LUTs approach (varying uncertainty)
                ! Note: NEBT is NOT squared when new LUT is read in.
+   
                call T2R(1, SAD_Chan(ii:ii), SAD_Chan(ii:ii)%Thermal%T0, R0, dR_dT0, status)
                call T2R(1, SAD_Chan(ii:ii), SPixel%Ym(i:i), Rm, dR_dTm, status)
                ! Convert to variance by squaring uncertainty
                SPixel%Sy(i,i) = (SAD_Chan(ii)%Thermal%NEBT * &
                                  (dR_dT0(1) / dR_dTm(1))) ** 2
+               if ( (SPixel%Type .eq.  0  .or. &
+                     SPixel%Type .eq. 11  .or. &
+                     SPixel%Type .eq. 12)      ) then
+                  !.and. SPixel%ViewIdx(i) .eq. 1) then
+                  SPixel%Sy(i,i) = SPixel%Sy(i,i) * 1000.0
+                  if (SPixel%ViewIdx(i) .eq. 1) then
+                     SPixel%Sy(i,i) = SPixel%Sy(i,i) * 1000.0
+                  end if
+               end if
             end if
          else
-            if (len_trim(Ctrl%LUTClass) == 3) then
+            if (.not. Ctrl%use_new_meas_error) then
                ! Old LUTs approach (fixed uncertainty)
                ! Note: NEDR is squared when old LUT is read in.
                SPixel%Sy(i,i) = SAD_Chan(ii)%Solar%NEDR
@@ -207,13 +219,15 @@ subroutine Get_Measurements(Ctrl, SAD_Chan, SPixel, MSI_Data, status)
                ! New LUTs approach (varying uncertainty)
                ! Convert reflectance to radiance
                j = SPixel%ViewIdx(i)
-               Lx = (SPixel%Ym(i) * cos(SPixel%Geom%SolZen(j) * d2r) * &
-                     SAD_Chan(ii)%Solar%F0) / Pi
+               !Lx = (SPixel%Ym(i) * cos(SPixel%Geom%SolZen(j) * d2r) * &
+               !      SAD_Chan(ii)%Solar%F0) / Pi
+               Lx = (100.0 * SPixel%Ym(i) * SAD_Chan(ii)%Solar%F0) / Pi
                ! Compute uncertainty in terms of radiance
                if (SAD_Chan(ii)%Solar%SNR > 0.0) then
                   ! variance = (Lx / SNR)**2 + 2(gain / sqrt(12))**2
                   dLx = sqrt((Lx / SAD_Chan(ii)%Solar%SNR) ** 2 + &
-                             MSI_Data%cal_gain(ii) ** 2 / 6.0)
+                       MSI_Data%cal_gain(ii) ** 2 / 6.0)
+                  write(*,*) 'Wrong error!',dLx
                else
                   ! variance = a**2 Lx**2 + b**2 Lx + c**2
                   dLx = sqrt(SAD_Chan(ii)%Solar%ru2(1) * Lx * Lx + &
@@ -222,9 +236,10 @@ subroutine Get_Measurements(Ctrl, SAD_Chan, SPixel, MSI_Data, status)
                end if
                ! Convert radiance uncertainty to reflectance uncertainty
                ! then square it to convert to reflectance variance
-               SPixel%Sy(i,i) = ((Pi * dLx) / &
-                                (cos(SPixel%Geom%SolZen(j) * d2r) * &
-                                 SAD_Chan(ii)%Solar%F0)) ** 2
+               !SPixel%Sy(i,i) = ((Pi * dLx) / &
+               !                 (cos(SPixel%Geom%SolZen(j) * d2r) * &
+               !                 SAD_Chan(ii)%Solar%F0)) ** 2
+               SPixel%Sy(i,i) = ((Pi * dLx) / (100.0 * SAD_Chan(ii)%Solar%F0)) ** 2
             end if
          end if
       end do
@@ -398,4 +413,10 @@ subroutine Get_Measurements(Ctrl, SAD_Chan, SPixel, MSI_Data, status)
       end do
    end if ! End of Coreg noise section
 
+!   write(*,"(a)", advance="no") 'Ny: '
+!   do i = 1, SPixel%Ind%Ny
+!      write(*,"(E8.2,a)", advance="no") SPixel%Sy(i,i), ' '
+!   end do
+!   write(*,"(a)") ' '
+   
 end subroutine Get_Measurements

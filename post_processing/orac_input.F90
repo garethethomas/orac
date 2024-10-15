@@ -35,6 +35,8 @@
 ! 2017/06/22, OS: Added phase variables.
 ! 2017/07/05, AP: Add channels_used, variables_retrieved. New QC.
 ! 2018/06/08, SP: Add satellite azimuth angle to output.
+! 2023/10/10, GT: Added measurement uncertainties to secondary data
+! 2023/07/03, GT: Added aerosol-layer height variables.
 !
 ! Bugs:
 ! None known.
@@ -70,6 +72,13 @@ module orac_input_m
       real(sreal),   pointer :: aot870_uncertainty(:,:)
       real(sreal),   pointer :: aer(:,:)
       real(sreal),   pointer :: aer_uncertainty(:,:)
+
+      real(sreal),   pointer :: alp(:,:)
+      real(sreal),   pointer :: alp_uncertainty(:,:)
+      real(sreal),   pointer :: alh(:,:)
+      real(sreal),   pointer :: alh_uncertainty(:,:)
+      real(sreal),   pointer :: alt(:,:)
+      real(sreal),   pointer :: alt_uncertainty(:,:)
 
       real(sreal),   pointer :: rho(:,:,:)
       real(sreal),   pointer :: rho_uncertainty(:,:,:)
@@ -169,6 +178,9 @@ module orac_input_m
       real(sreal), pointer :: aer_ap(:,:)
       real(sreal), pointer :: aer_fg(:,:)
 
+      real(sreal), pointer :: alp_ap(:,:)
+      real(sreal), pointer :: alp_fg(:,:)
+
       real(sreal), pointer :: rho_ap(:,:,:)
       real(sreal), pointer :: rho_fg(:,:,:)
 
@@ -195,6 +207,7 @@ module orac_input_m
       real(sreal), pointer :: ctp2_fg(:,:)
 
       real(sreal), pointer :: channels(:,:,:)
+      real(sreal), pointer :: Sy(:,:,:)
       real(sreal), pointer :: y0(:,:,:)
       real(sreal), pointer :: residuals(:,:,:)
 
@@ -315,6 +328,7 @@ subroutine cross_reference_indexing(n, loop_ind, main_ind)
                                   any(loop_ind(1:n)%flags%do_cldmask_uncertainty)
    main_ind%flags%do_phase           = any(loop_ind(1:n)%flags%do_phase)
    main_ind%flags%do_covariance      = any(loop_ind(1:n)%flags%do_covariance)
+   main_ind%flags%do_meas_error      = any(loop_ind(1:n)%flags%do_meas_error)
    main_ind%flags%do_ann_phase  = any(loop_ind(1:n)%flags%do_ann_phase)
    main_ind%flags%do_ann_phase_uncertainty = &
                                   any(loop_ind(1:n)%flags%do_ann_phase_uncertainty)

@@ -40,6 +40,8 @@
 ! 2017/05/17, OS: Added ann phase variables.
 ! 2017/07/05, AP: Add channels_used, variables_retrieved. New QC.
 ! 2018/06/08, SP: Add satellite azimuth angle to output.
+! 2023/10/10, GT: Added optional measurement uncertainties to secondary output.
+! 2024/03/20, GT: Added aerosol layer height related variables to primary.
 !
 ! Bugs:
 ! None known.
@@ -87,6 +89,40 @@ subroutine alloc_output_data_primary(ind, MaxIter, data)
       data%aer = sint_fill_value
       allocate(data%aer_uncertainty(ind%X0:ind%X1, ind%Y0:ind%Y1))
       data%aer_uncertainty = sint_fill_value
+      
+      if (ind%NThermal .gt. 1) then
+         allocate(data%alp(ind%X0:ind%X1, ind%Y0:ind%Y1))
+         data%alp = sint_fill_value
+         allocate(data%alp_uncertainty(ind%X0:ind%X1, ind%Y0:ind%Y1))
+         data%alp_uncertainty = sint_fill_value
+
+         allocate(data%alh(ind%X0:ind%X1, ind%Y0:ind%Y1))
+         data%alh = sint_fill_value
+         allocate(data%alh_uncertainty(ind%X0:ind%X1, ind%Y0:ind%Y1))
+         data%alh_uncertainty = sint_fill_value
+
+         allocate(data%alt(ind%X0:ind%X1, ind%Y0:ind%Y1))
+         data%alh = sint_fill_value
+         allocate(data%alt_uncertainty(ind%X0:ind%X1, ind%Y0:ind%Y1))
+         data%alh_uncertainty = sint_fill_value
+         ! Only allocate stemp arrays if they're not going to be created for
+         ! cloud results further-on in this subroutine.
+         if (.not. ind%flags%do_cloud) then
+            allocate(data%stemp(ind%X0:ind%X1, ind%Y0:ind%Y1))
+            data%stemp = sint_fill_value
+            allocate(data%stemp_uncertainty(ind%X0:ind%X1, ind%Y0:ind%Y1))
+            data%stemp_uncertainty = sint_fill_value
+         end if
+      else
+         nullify(data%alp)
+         nullify(data%alp_uncertainty)
+         nullify(data%alh)
+         nullify(data%alh_uncertainty)
+         nullify(data%alt)
+         nullify(data%alt_uncertainty)
+         ! Don't need to nullify stemp, as it will be dealt with
+         ! when checking "do_cloud"
+      end if
    else
       nullify(data%aot550)
       nullify(data%aot550_uncertainty)
@@ -94,6 +130,14 @@ subroutine alloc_output_data_primary(ind, MaxIter, data)
       nullify(data%aot870_uncertainty)
       nullify(data%aer)
       nullify(data%aer_uncertainty)
+      nullify(data%alp)
+      nullify(data%alp_uncertainty)
+      nullify(data%alh)
+      nullify(data%alh_uncertainty)
+      nullify(data%alt)
+      nullify(data%alt_uncertainty)
+      ! Don't need to nullify stemp, as it will be dealt with
+      ! when checking "do_cloud"
    end if
 
    if (ind%flags%do_rho) then
@@ -255,8 +299,6 @@ subroutine alloc_output_data_primary(ind, MaxIter, data)
       nullify(data%ctp_corrected_uncertainty)
       nullify(data%cc_total)
       nullify(data%cc_total_uncertainty)
-      nullify(data%stemp)
-      nullify(data%stemp_uncertainty)
       nullify(data%cth)
       nullify(data%cth_uncertainty)
       nullify(data%cth_corrected)
@@ -273,6 +315,12 @@ subroutine alloc_output_data_primary(ind, MaxIter, data)
       nullify(data%cee_uncertainty)
       nullify(data%cphcot)
       nullify(data%cccot_pre)
+      ! Check to see if the surface temperature is required for aerosol
+      ! retrieval before nullifying
+      if ((.not. ind%flags%do_cloud) .and. (ind%NThermal .le. 1)) then
+         nullify(data%stemp)
+         nullify(data%stemp_uncertainty)
+      end if
    end if
 
    if (ind%flags%do_cloud_layer_2) then
@@ -482,11 +530,35 @@ subroutine alloc_output_data_secondary(ind, data)
       data%aer_ap = sint_fill_value
       allocate(data%aer_fg(ind%X0:ind%X1, ind%Y0:ind%Y1))
       data%aer_fg = sint_fill_value
+
+      if (ind%NThermal .gt. 1) then
+         allocate(data%alp_ap(ind%X0:ind%X1, ind%Y0:ind%Y1))
+         data%alp_ap = sint_fill_value
+         allocate(data%alp_fg(ind%X0:ind%X1, ind%Y0:ind%Y1))
+         data%alp_fg = sint_fill_value
+         ! Only allocate stemp arrays if they're not going to be created for
+         ! cloud results further-on in this subroutine.
+         if (.not. ind%flags%do_cloud) then
+            allocate(data%stemp_ap(ind%X0:ind%X1, ind%Y0:ind%Y1))
+            data%stemp_ap = sint_fill_value
+            allocate(data%stemp_fg(ind%X0:ind%X1, ind%Y0:ind%Y1))
+            data%stemp_fg = sint_fill_value
+         end if
+      else
+         nullify(data%alp_ap)
+         nullify(data%alp_fg)
+         ! Don't need to nullify stemp arrays, as they will be dealt with
+         ! when checking "do_cloud"
+      end if
    else
       nullify(data%aot550_ap)
       nullify(data%aot550_fg)
       nullify(data%aer_ap)
       nullify(data%aer_fg)
+      nullify(data%alp_ap)
+      nullify(data%alp_fg)
+      ! Don't need to nullify stemp arrays, as they will be dealt with
+      ! when checking "do_cloud"
    end if
 
    if (ind%flags%do_rho) then
@@ -569,10 +641,14 @@ subroutine alloc_output_data_secondary(ind, data)
       nullify(data%cer_fg)
       nullify(data%ctp_ap)
       nullify(data%ctp_fg)
-      nullify(data%stemp_fg)
-      nullify(data%stemp_ap)
       nullify(data%vid_albedo)
       nullify(data%albedo)
+      ! Check to see if the surface temperature is required for aerosol
+      ! retrieval before nullifying
+      if ((.not. ind%flags%do_cloud) .and. (ind%NThermal .le. 1)) then
+         nullify(data%stemp_fg)
+         nullify(data%stemp_ap)
+      end if
    end if
 
    if (ind%flags%do_cloud_layer_2) then
@@ -616,6 +692,28 @@ subroutine alloc_output_data_secondary(ind, data)
    data%channels_vmax = sint_fill_value
    allocate(data%channels(ind%X0:ind%X1, ind%Y0:ind%Y1, ind%Ny))
    data%channels = sint_fill_value
+
+   if (ind%flags%do_meas_error) then
+      allocate(data%vid_Sy(ind%Ny))
+      data%vid_Sy = 0
+      allocate(data%Sy_scale(ind%Ny))
+      data%Sy_scale = sreal_fill_value
+      allocate(data%Sy_offset(ind%Ny))
+      data%Sy_offset = sreal_fill_value
+      allocate(data%Sy_vmin(ind%Ny))
+      data%Sy_vmin = sint_fill_value
+      allocate(data%Sy_vmax(ind%Ny))
+      data%Sy_vmax = sint_fill_value
+      allocate(data%Sy(ind%X0:ind%X1, ind%Y0:ind%Y1, ind%Ny))
+      data%Sy = sint_fill_value
+   else
+      nullify(data%vid_Sy)
+      nullify(data%Sy_scale)
+      nullify(data%Sy_offset)
+      nullify(data%Sy_vmin)
+      nullify(data%Sy_vmax)
+      nullify(data%Sy)
+   end if
 
    allocate(data%vid_y0(ind%Ny))
    data%vid_y0 = 0
@@ -669,6 +767,13 @@ subroutine alloc_output_data_secondary(ind, data)
          data%channels_vmin(i) = 0
          data%channels_vmax(i) = 32000
 
+         if (ind%flags%do_meas_error) then
+            data%Sy_scale(i) = 0.001
+            data%Sy_offset(i) = 32.0
+            data%Sy_vmin(i) = -32000
+            data%Sy_vmax(i) = 32000
+         end if
+
          data%y0_scale(i) = 0.01
          data%y0_offset(i) = 100.0
          data%y0_vmin(i) = 0
@@ -683,6 +788,13 @@ subroutine alloc_output_data_secondary(ind, data)
          data%channels_offset(i) = 0.0
          data%channels_vmin(i) = 0
          data%channels_vmax(i) = 10000
+
+         if (ind%flags%do_meas_error) then
+            data%Sy_scale(i) = 0.00001 ! Max uncertainty of 0.32 in reflectance
+            data%Sy_offset(i) = 0.0
+            data%Sy_vmin(i) = 0
+            data%Sy_vmax(i) = 32765
+         end if
 
          data%y0_scale(i) = 0.0001
          data%y0_offset(i) = 0.0

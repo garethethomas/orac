@@ -208,9 +208,9 @@ subroutine FM(Ctrl, SPixel, SAD_Chan, SAD_LUT, RTM_Pc, X, Y, dY_dX, status)
 
    ! Call thermal forward model (required for day, twilight and night)
    ! ACP: Temporarily turn off Thermal entirely for aerosol retrieval
-   if (SPixel%Ind%NThermal > 0 .and. status == 0 .and. &
-        Ctrl%Approach /= AppAerOx .and. Ctrl%Approach /= AppAerSw .and. &
-        Ctrl%Approach /= AppAerO1) then
+   if (SPixel%Ind%NThermal > 0 .and. status == 0) then !.and. &
+!        Ctrl%Approach /= AppAerOx .and. Ctrl%Approach /= AppAerSw .and. &
+!        Ctrl%Approach /= AppAerO1) then
       SAD_therm = SAD_Chan( &
            SPixel%spixel_y_thermal_to_ctrl_y_index(1:SPixel%Ind%NThermal))
 

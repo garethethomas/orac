@@ -70,6 +70,7 @@
 ! 2017/06/21, OS: Added ANN phase variables.
 ! 2017/07/05, AP: Add channels_used, variables_retrieved. New QC.
 ! 2018/06/08, SP: Add satellite azimuth angle to output.
+! 2024/03/20, GT: Added aerosol layer height related variables to primary.
 !
 ! Bugs:
 ! None known.
@@ -97,8 +98,10 @@ subroutine prepare_output_primary(Ctrl, i, j, MSI_Data, SPixel, RTM_Pc, Diag, &
    type(output_data_primary_t), intent(inout) :: output_data
 
    integer            :: k, kk, l, i_rho
-   integer(kind=sint) :: temp_short_ctp_uncertainty
-   real(kind=sreal)   :: temp_real, temp_real_ot, temp_real_ctp_uncertainty
+   integer(kind=sint) :: temp_short_ctp_uncertainty, temp_short_alp_uncertainty
+   real(kind=sreal)   :: temp_real_ctp_uncertainty, temp_real_alp_uncertainty
+   real(kind=sreal)   :: temp_real, temp_real_ot
+
 
 
    !----------------------------------------------------------------------------
@@ -317,6 +320,104 @@ if (Ctrl%Ind%flags%do_swansea) then
       end if
    end do
 end if
+
+if (Ctrl%Ind%flags%do_aerosol .and. Ctrl%Ind%NThermal .ge. 2) then
+   !----------------------------------------------------------------------------
+   ! alp, alp_uncertainty
+   !----------------------------------------------------------------------------
+   call prepare_short_packed_float( &
+        SPixel%Xn(IPc), output_data%alp(i,j), &
+        output_data%alp_scale, output_data%alp_offset, &
+        output_data%alp_vmin, output_data%alp_vmax, &
+        MissingXn, output_data%alp_vmax)
+
+   if (SPixel%Sn(IPc,IPc) .eq. MissingSn) then
+      temp_real_alp_uncertainty=sreal_fill_value
+   else
+      temp_real_alp_uncertainty = sqrt(SPixel%Sn(IPc,IPc))
+      temp_short_alp_uncertainty = int((temp_real_alp_uncertainty - &
+                                  output_data%alp_uncertainty_offset) / &
+                                  output_data%alp_uncertainty_scale, kind=sint)
+   end if
+   call prepare_short_packed_float( &
+        temp_real_alp_uncertainty, output_data%alp_uncertainty(i,j), &
+        output_data%alp_uncertainty_scale, output_data%alp_uncertainty_offset, &
+        output_data%alp_uncertainty_vmin, output_data%alp_uncertainty_vmax, &
+        sreal_fill_value, output_data%alp_uncertainty_vmax)
+   !----------------------------------------------------------------------------
+   ! alh, alh_uncertainty
+   !----------------------------------------------------------------------------
+   temp_real = RTM_Pc(1)%Hc/g_wmo/1000. ! now it's in km
+   call prepare_short_packed_float( &
+        temp_real, output_data%alh(i,j), &
+        output_data%alh_scale, output_data%alh_offset, &
+        output_data%alh_vmin, output_data%alh_vmax, &
+        MissingXn, output_data%alh_vmax)
+
+   ! If alp_uncertainty is good compute cth_uncertainty
+   if (temp_real_alp_uncertainty .eq. sreal_fill_value) then
+      output_data%alh_uncertainty(i,j)=sint_fill_value
+   else if (temp_short_alp_uncertainty .lt. output_data%alp_uncertainty_vmin) then
+      output_data%alh_uncertainty(i,j)=sint_fill_value
+   else if (temp_short_alp_uncertainty .gt. output_data%alp_uncertainty_vmax) then
+      output_data%alh_uncertainty(i,j)=output_data%alh_uncertainty_vmax
+   else
+      temp_real=abs(RTM_Pc(1)%dHc_dPc/g_wmo/1000.)*temp_real_alp_uncertainty
+      call prepare_short_packed_float( &
+           temp_real, output_data%alh_uncertainty(i,j), &
+           output_data%alh_uncertainty_scale, &
+           output_data%alh_uncertainty_offset, &
+           output_data%alh_uncertainty_vmin, &
+           output_data%alh_uncertainty_vmax, &
+           sreal_fill_value, output_data%alh_uncertainty_vmax)
+   end if
+   !----------------------------------------------------------------------------
+   ! alt, alt_uncertainty
+   !----------------------------------------------------------------------------
+   call prepare_short_packed_float( &
+        RTM_Pc(1)%Tc, output_data%alt(i,j), &
+        output_data%alt_scale, output_data%alt_offset, &
+        output_data%alt_vmin, output_data%alt_vmax, &
+        MissingXn, output_data%alt_vmax)
+
+   ! If alp_uncertainty is good compute ctt_uncertainty
+   if (temp_real_alp_uncertainty .eq. sreal_fill_value) then
+      output_data%alt_uncertainty(i,j)=sint_fill_value
+   else if (temp_short_alp_uncertainty .lt. output_data%alp_uncertainty_vmin) then
+      output_data%alt_uncertainty(i,j)=sint_fill_value
+   else if (temp_short_alp_uncertainty .gt. output_data%alp_uncertainty_vmax) then
+      output_data%alt_uncertainty(i,j)=output_data%alt_uncertainty_vmax
+   else
+      temp_real=abs(RTM_Pc(1)%dTc_dPc)*temp_real_alp_uncertainty
+      call prepare_short_packed_float( &
+           temp_real, output_data%alt_uncertainty(i,j), &
+           output_data%alt_uncertainty_scale, output_data%alt_uncertainty_offset, &
+           output_data%alt_uncertainty_vmin, output_data%alt_uncertainty_vmax, &
+           sreal_fill_value, output_data%alt_uncertainty_vmax)
+   end if
+   !----------------------------------------------------------------------------
+   ! stemp, stemp_uncertainty
+   !----------------------------------------------------------------------------
+   call prepare_short_packed_float( &
+        SPixel%Xn(ITs), output_data%stemp(i,j), &
+        output_data%stemp_scale, output_data%stemp_offset, &
+        output_data%stemp_vmin, output_data%stemp_vmax, &
+        MissingXn, output_data%stemp_vmax)
+
+   temp_real = sqrt(SPixel%Sn(ITs,ITs))
+   call prepare_short_packed_float( &
+        temp_real, output_data%stemp_uncertainty(i,j), &
+        output_data%stemp_uncertainty_scale, &
+        output_data%stemp_uncertainty_offset, &
+        output_data%stemp_uncertainty_vmin, &
+        output_data%stemp_uncertainty_vmax, &
+        MissingSn, output_data%stemp_uncertainty_vmax, &
+        control=SPixel%Sn(ITs,ITs))
+end if
+
+!-------------------------------------------------------------------------------
+! END OF AEROSOL SPECIFIC VARIABLES
+!-------------------------------------------------------------------------------
 
 if (Ctrl%Ind%flags%do_cloud) then
    !----------------------------------------------------------------------------

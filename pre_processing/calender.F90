@@ -38,36 +38,36 @@ module calender_m
              DOY2GREG
 
    TYPE :: DATE_TYPE_GREG2JD
-      INTEGER :: YEAR_J                                                             ! year of end of Julian calendar
-      INTEGER :: MONTH_J                                                            ! month of end of Julian calendar
-      INTEGER :: DAY_J                                                              ! day of end of Julian calendar
-      INTEGER :: YEAR_G                                                             ! year of start of Gregorian calendar
-      INTEGER :: MONTH_G                                                            ! month of start of Gregorian calendar
-      INTEGER :: DAY_G                                                              ! day of start of Gregorian calendar
+      INTEGER :: YEAR_J     ! year of end of Julian calendar
+      INTEGER :: MONTH_J    ! month of end of Julian calendar
+      INTEGER :: DAY_J      ! day of end of Julian calendar
+      INTEGER :: YEAR_G     ! year of start of Gregorian calendar
+      INTEGER :: MONTH_G    ! month of start of Gregorian calendar
+      INTEGER :: DAY_G      ! day of start of Gregorian calendar
    END TYPE DATE_TYPE_GREG2JD
 
    TYPE :: DATE_TYPE_GREG2DOY
-      INTEGER :: YEAR_J                                                             ! year of end of Julian calendar
-      INTEGER :: MONTH_J                                                            ! month of end of Julian calendar
-      INTEGER :: DAY_J                                                              ! day of end of Julian calendar
-      INTEGER :: YEAR_G                                                             ! year of start of Gregorian calendar
-      INTEGER :: MONTH_G                                                            ! month of start of Gregorian calendar
-      INTEGER :: DAY_G                                                              ! day of start of Gregorian calendar
-      INTEGER :: NDAYS                                                              ! number of days dropped from calendar at switch
+      INTEGER :: YEAR_J     ! year of end of Julian calendar
+      INTEGER :: MONTH_J    ! month of end of Julian calendar
+      INTEGER :: DAY_J      ! day of end of Julian calendar
+      INTEGER :: YEAR_G     ! year of start of Gregorian calendar
+      INTEGER :: MONTH_G    ! month of start of Gregorian calendar
+      INTEGER :: DAY_G      ! day of start of Gregorian calendar
+      INTEGER :: NDAYS      ! number of days dropped from calendar at switch
    END TYPE DATE_TYPE_GREG2DOY
 
    TYPE :: DATE_TYPE_DOY2GREG
-      INTEGER :: YEAR_J                                                             ! year of end of Julian calendar
-      INTEGER :: DOY_J                                                              ! day of year of end of Julian calendar
-      INTEGER :: NDAYS                                                              ! num of days dropped from calendar at switch
-      INTEGER :: TTLDAYS                                                            ! number of days in year of switch
+      INTEGER :: YEAR_J     ! year of end of Julian calendar
+      INTEGER :: DOY_J      ! day of year of end of Julian calendar
+      INTEGER :: NDAYS      ! num of days dropped from calendar at switch
+      INTEGER :: TTLDAYS    ! number of days in year of switch
    END TYPE DATE_TYPE_DOY2GREG
 
 contains
 
-!***********************************************************************************************************************************
+!********************************************************************************
 !
-!                                                          G R E G 2 J D
+!                                   G R E G 2 J D
 !
 !
 !  Program:      GREG2JD
@@ -82,13 +82,16 @@ contains
 !
 !  Version:      1.00b  (October 25, 2004)
 !
-!  Description:  This program converts a date on the Gregorian or Julian calendars to a Julian day.
+!  Description:  This program converts a date on the Gregorian or Julian
+!                calendars to a Julian day.
 !
-!  Note:         Structure 'gregorian_start' defines the end dates of the Julian calendar and start dates of the Gregorian calendar.
-!                Set the parameter 'gregorian_choice' to indicate the desired start date of the Gregorian calendar, as listed in
-!                array 'gregorian_start'.
+!  Note:         Structure 'gregorian_start' defines the end dates of the
+!                Julian calendar and start dates of the Gregorian calendar.
+!                Set the parameter 'gregorian_choice' to indicate the desired
+!                start date of the Gregorian calendar, as listed in array
+!                'gregorian_start'.
 !
-!***********************************************************************************************************************************
+!********************************************************************************
 
 subroutine GREG2JD(y,m,d,jd)
 
@@ -96,28 +99,28 @@ subroutine GREG2JD(y,m,d,jd)
 
       IMPLICIT NONE
 
-      INTEGER(kind=sint), intent(in) :: Y                                           ! year
-      INTEGER(kind=sint), intent(in) :: M                                           ! month
-!     DOUBLE PRECISION,   intent(in) :: D                                           ! day of month
-      INTEGER(kind=sint), intent(in) :: D                                           ! day of month
-      DOUBLE PRECISION,   intent(out) :: JD                                         ! Julian day
+      INTEGER(kind=sint), intent(in) :: Y   ! year
+      INTEGER(kind=sint), intent(in) :: M   ! month
+!     DOUBLE PRECISION,   intent(in) :: D   ! day of month
+      INTEGER(kind=sint), intent(in) :: D   ! day of month
+      DOUBLE PRECISION,   intent(out) :: JD ! Julian day
 
-      INTEGER :: A, B                                                               ! intermediate variables
+      INTEGER :: A, B                       ! intermediate variables
       INTEGER :: Y2
       INTEGER :: M2
-      LOGICAL :: GREGORIAN_FLAG                                                     ! .TRUE. for Gregorian date, .FALSE. for Julian
+      LOGICAL :: GREGORIAN_FLAG             ! .TRUE. for Gregorian date, .FALSE. for Julian
 
       TYPE (DATE_TYPE_GREG2JD), DIMENSION (3) :: GREGORIAN_START =   &
-         (/ DATE_TYPE_GREG2JD (1582, 10,  4, 1582, 10, 15),          &              ! 1: Decree by Pope Gregory XIII
-            DATE_TYPE_GREG2JD (1752,  9,  2, 1752,  9, 14),          &              ! 2: Great Britain
-            DATE_TYPE_GREG2JD (1918,  1, 31, 1918,  2, 14)  /)                      ! 3: Russia
+         (/ DATE_TYPE_GREG2JD (1582, 10,  4, 1582, 10, 15),          & ! 1: Decree by Pope Gregory XIII
+            DATE_TYPE_GREG2JD (1752,  9,  2, 1752,  9, 14),          & ! 2: Great Britain
+            DATE_TYPE_GREG2JD (1918,  1, 31, 1918,  2, 14)  /)         ! 3: Russia
 
-      INTEGER, PARAMETER :: GREGORIAN_CHOICE = 1                                    ! set to 1 for 1582 date, 2 for 1752 date, etc.
+      INTEGER, PARAMETER :: GREGORIAN_CHOICE = 1 ! set to 1 for 1582 date, 2 for 1752 date, etc.
 
 
-!-----------------------------------------------------------------------------------------------------------------------------------
+!--------------------------------------------------------------------------------
 !  Main program code
-!-----------------------------------------------------------------------------------------------------------------------------------
+!--------------------------------------------------------------------------------
 
       GREGORIAN_FLAG = GREGORIAN_GREG2JD(Y, M, int(D, kind=sint), GREGORIAN_START(GREGORIAN_CHOICE))   ! test for Gregorian calendar
 
@@ -129,10 +132,10 @@ subroutine GREG2JD(y,m,d,jd)
          M2 = M2 + 12
       END IF
 
-      IF (GREGORIAN_FLAG) THEN                                                      ! Gregorian calendar
+      IF (GREGORIAN_FLAG) THEN      ! Gregorian calendar
          A = Y2/100
          B = 2 - A + A/4
-      ELSE                                                                          ! Julian calendar
+      ELSE                          ! Julian calendar
          B = 0
       END IF
 
@@ -141,12 +144,13 @@ subroutine GREG2JD(y,m,d,jd)
 end subroutine GREG2JD
 
 
-!***********************************************************************************************************************************
+!********************************************************************************
 !  GREGORIAN
 !
-!  This function determines whether a given date is in the Gregorian calendar (return value of .TRUE.) or on the Julian calendar
+!  This function determines whether a given date is in the Gregorian calendar
+!  (return value of .TRUE.) or on the Julian calendar
 !  (return value of .FALSE.).
-!***********************************************************************************************************************************
+!********************************************************************************
 
       FUNCTION GREGORIAN_GREG2JD (YEAR, MONTH, DAY, GREG_START) RESULT (GREG_FLAG)
 
@@ -154,27 +158,27 @@ end subroutine GREG2JD
 
       IMPLICIT NONE
 
-      LOGICAL :: GREG_FLAG                                                          ! result flag (.TRUE. for Gregorian)
+      LOGICAL :: GREG_FLAG                               ! result flag (.TRUE. for Gregorian)
 
-      INTEGER(kind=sint), INTENT(IN) :: YEAR                                        ! input year
-      INTEGER(kind=sint), INTENT(IN) :: MONTH                                       ! input month
-      INTEGER(kind=sint), INTENT(IN) :: DAY                                         ! input day of month
-      TYPE (DATE_TYPE_GREG2JD), INTENT(IN) :: GREG_START                            ! contains Julian stop/Gregorian start dates
+      INTEGER(kind=sint), INTENT(IN) :: YEAR             ! input year
+      INTEGER(kind=sint), INTENT(IN) :: MONTH            ! input month
+      INTEGER(kind=sint), INTENT(IN) :: DAY              ! input day of month
+      TYPE (DATE_TYPE_GREG2JD), INTENT(IN) :: GREG_START ! contains Julian stop/Gregorian start dates
 
-      INTEGER :: CALTYPE = 0                                                        ! 0=unknown, 1=Julian, 2=Gregorian
+      INTEGER :: CALTYPE = 0                             ! 0=unknown, 1=Julian, 2=Gregorian
 
 !
 !     Start of code.
 !
 
-      IF (YEAR .LT. GREG_START%YEAR_J) THEN                                         ! if year before end of Julian calendar..
-         CALTYPE = 1                                                                ! ..then this is a Julian date
-      ELSE IF (YEAR .EQ. GREG_START%YEAR_J) THEN                                    ! if this is the last year of the Julian cal..
-         IF (MONTH .LT. GREG_START%MONTH_J) THEN                                    ! ..then if this is before the ending month..
-            CALTYPE = 1                                                             ! ..then this is a Julian date
-         ELSE IF (MONTH .EQ. GREG_START%MONTH_J) THEN                               ! if this is the ending month..
-            IF (DAY .LE. GREG_START%DAY_J) THEN                                     ! ..then if this is before/at the ending date..
-               CALTYPE = 1                                                          ! ..then this is a Julian date
+      IF (YEAR .LT. GREG_START%YEAR_J) THEN      ! if year before end of Julian calendar..
+         CALTYPE = 1                             ! ..then this is a Julian date
+      ELSE IF (YEAR .EQ. GREG_START%YEAR_J) THEN ! if this is the last year of the Julian cal..
+         IF (MONTH .LT. GREG_START%MONTH_J) THEN ! ..then if this is before the ending month..
+            CALTYPE = 1                          ! ..then this is a Julian date
+         ELSE IF (MONTH .EQ. GREG_START%MONTH_J) THEN ! if this is the ending month..
+            IF (DAY .LE. GREG_START%DAY_J) THEN  ! ..then if this is before/at the ending date..
+               CALTYPE = 1                       ! ..then this is a Julian date
             END IF
          END IF
       END IF
@@ -342,11 +346,11 @@ subroutine GREG2DOY(y,m,d,doy)
       GREGORIAN_FLAG = GREGORIAN_GREG2DOY(Y, M, int(D, kind=sint), GREGORIAN_START(GREGORIAN_CHOICE))   ! test for Gregorian calendar
 
       LEAP = .FALSE.
-      IF (MOD(Y,4) .EQ. 0) LEAP = .TRUE.
+      IF (MOD(INT(Y),4) .EQ. 0) LEAP = .TRUE.
 
       IF (GREGORIAN_FLAG) THEN
-         IF (MOD(Y,100) .EQ. 0) LEAP = .FALSE.
-         IF (MOD(Y,400) .EQ. 0) LEAP = .TRUE.
+         IF (MOD(INT(Y),100) .EQ. 0) LEAP = .FALSE.
+         IF (MOD(INT(Y),400) .EQ. 0) LEAP = .TRUE.
       END IF
 
       IF (LEAP) THEN
@@ -502,11 +506,11 @@ subroutine DOY2GREG(doy,y,m,d)
       GREGORIAN_FLAG = GREGORIAN_DOY2GREG(Y, DOY, GREGORIAN_START(GREGORIAN_CHOICE))         ! test for Gregorian calendar
 
       LEAP = .FALSE.                                                                ! test for leap year
-      IF (MOD(Y,4) .EQ. 0) LEAP = .TRUE.
+      IF (MOD(INT(Y),4) .EQ. 0) LEAP = .TRUE.
 
       IF (GREGORIAN_FLAG) THEN                                                      ! additional Gregorian leap year tests
-         IF (MOD(Y,100) .EQ. 0) LEAP = .FALSE.
-         IF (MOD(Y,400) .EQ. 0) LEAP = .TRUE.
+         IF (MOD(INT(Y),100) .EQ. 0) LEAP = .FALSE.
+         IF (MOD(INT(Y),400) .EQ. 0) LEAP = .TRUE.
       END IF
 
       IF (LEAP) THEN                                                                ! set K based on calendar type
@@ -560,7 +564,7 @@ end subroutine DOY2GREG
 
 
       LEAP_FLAG = .FALSE.
-      IF (MOD(YEAR,4) .EQ. 0) LEAP_FLAG = .TRUE.
+      IF (MOD(INT(YEAR),4) .EQ. 0) LEAP_FLAG = .TRUE.
 
       IF (YEAR .LT. GREG_START%YEAR_J) THEN                                         ! if year before end of Julian calendar..
          CALTYPE = 1                                                                ! ..then this is a Julian date
@@ -578,8 +582,8 @@ end subroutine DOY2GREG
 
       IF (YEAR .GT. GREG_START%YEAR_J) THEN                                         ! if year after start of Gregorian calendar..
          CALTYPE = 2                                                                ! ..then this is a Gregorian date
-         IF (MOD(YEAR,100) .EQ. 0) LEAP_FLAG = .FALSE.
-         IF (MOD(YEAR,400) .EQ. 0) LEAP_FLAG = .TRUE.
+         IF (MOD(INT(YEAR),100) .EQ. 0) LEAP_FLAG = .FALSE.
+         IF (MOD(INT(YEAR),400) .EQ. 0) LEAP_FLAG = .TRUE.
          IF (LEAP_FLAG) THEN
             TOTAL_DAYS = 366
          ELSE

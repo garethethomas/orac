@@ -30,6 +30,8 @@
 ! 2016/05/04, AP: Fix read of optional, channel-dependent fields.
 ! 2017/01/20, CP: made netdcf file name read more robust
 ! 2017/01/09, CP: ML additions.
+! 2023/10/10, GT: Added optional output of measurement uncertainties
+! 2024/07/03, GT: Added aerosol-layer height and surface-temperature variables.
 !
 ! Bugs:
 ! Not a bug but this code assumes 5 channels of instrument data.
@@ -51,88 +53,97 @@ subroutine read_input_secondary_common(ncid, input_data, indexing, sval, verbose
    character(len=32)  :: input_num
    character(len=512) :: input_dummy, input_dummy2
 
-if (indexing%flags%do_aerosol) then
-   call ncdf_read_packed_array(ncid, "aot550_ap", input_data%aot550_ap, &
-        start = [1, sval])
-   call ncdf_read_packed_array(ncid, "aot550_fg", input_data%aot550_fg, &
-        start = [1, sval])
-   call ncdf_read_packed_array(ncid, "aer_ap", input_data%aer_ap, &
-        start = [1, sval])
-   call ncdf_read_packed_array(ncid, "aer_fg", input_data%aer_fg, &
-        start = [1, sval])
-end if
+   if (indexing%flags%do_aerosol) then
+      call ncdf_read_packed_array(ncid, "aot550_ap", input_data%aot550_ap, &
+           start = [1, sval])
+      call ncdf_read_packed_array(ncid, "aot550_fg", input_data%aot550_fg, &
+           start = [1, sval])
+      call ncdf_read_packed_array(ncid, "aer_ap", input_data%aer_ap, &
+           start = [1, sval])
+      call ncdf_read_packed_array(ncid, "aer_fg", input_data%aer_fg, &
+           start = [1, sval])
+      if (indexing%NThermal .ge. 2) then
+         call ncdf_read_packed_array(ncid, "alp_ap", input_data%alp_ap, &
+              start = [1, sval])
+         call ncdf_read_packed_array(ncid, "alp_fg", input_data%alp_fg, &
+              start = [1, sval])
+      end if
+   end if
 
-if (indexing%flags%do_rho) then
-   i_rho = 0
-   do i=1,indexing%NSolar
-      write(input_num, "(i4)") indexing%Y_Id(indexing%YSolar(i))
-
-      do j=1,MaxRho_XX
-         if (indexing%rho_terms(i,j)) then
+   if (indexing%flags%do_rho) then
+      i_rho = 0
+      do i=1,indexing%NSolar
+         write(input_num, "(i4)") indexing%Y_Id(indexing%YSolar(i))
+         
+         do j=1,MaxRho_XX
+            if (indexing%rho_terms(i,j)) then
+               i_rho = i_rho + 1
+               
+               call create_rho_field_name(j, 3, input_num, input_dummy)
+               call ncdf_read_packed_array(ncid, trim(adjustl(input_dummy)), &
+                    input_data%rho_ap(:,:,i_rho), start = [1, sval])
+               call create_rho_field_name(j, 4, input_num, input_dummy)
+               call ncdf_read_packed_array(ncid, trim(adjustl(input_dummy)), &
+                    input_data%rho_fg(:,:,i_rho), start = [1, sval])
+            end if
+         end do
+      end do
+   end if
+   
+   if (indexing%flags%do_swansea) then
+      i_rho = 0
+      do i=1,indexing%NSolar
+         if (indexing%ss_terms(i)) then
             i_rho = i_rho + 1
-
-            call create_rho_field_name(j, 3, input_num, input_dummy)
+            
+            write(input_num, "(i4)") indexing%Y_Id(indexing%YSolar(i))
+            
+            input_dummy='swansea_s_ap_in_channel_no_'//trim(adjustl(input_num))
             call ncdf_read_packed_array(ncid, trim(adjustl(input_dummy)), &
-                 input_data%rho_ap(:,:,i_rho), start = [1, sval])
-            call create_rho_field_name(j, 4, input_num, input_dummy)
+                 input_data%swansea_s_ap(:,:,i_rho), start = [1, sval])
+            input_dummy='swansea_s_fg_in_channel_no_'//trim(adjustl(input_num))
             call ncdf_read_packed_array(ncid, trim(adjustl(input_dummy)), &
-                 input_data%rho_fg(:,:,i_rho), start = [1, sval])
+                 input_data%swansea_s_fg(:,:,i_rho), start = [1, sval])
          end if
       end do
-   end do
-end if
-
-if (indexing%flags%do_swansea) then
-   i_rho = 0
-   do i=1,indexing%NSolar
-      if (indexing%ss_terms(i)) then
-         i_rho = i_rho + 1
-
-         write(input_num, "(i4)") indexing%Y_Id(indexing%YSolar(i))
-
-         input_dummy='swansea_s_ap_in_channel_no_'//trim(adjustl(input_num))
+      
+      do i=1,indexing%NViews
+         write(input_num, "(i4)") i
+         
+         input_dummy='swansea_p_ap_in_view_no_'//trim(adjustl(input_num))
          call ncdf_read_packed_array(ncid, trim(adjustl(input_dummy)), &
-              input_data%swansea_s_ap(:,:,i_rho), start = [1, sval])
-         input_dummy='swansea_s_fg_in_channel_no_'//trim(adjustl(input_num))
+              input_data%swansea_p_ap(:,:,i), start = [1, sval])
+         input_dummy='swansea_p_fg_in_view_no_'//trim(adjustl(input_num))
          call ncdf_read_packed_array(ncid, trim(adjustl(input_dummy)), &
-              input_data%swansea_s_fg(:,:,i_rho), start = [1, sval])
-      end if
-   end do
-
-   do i=1,indexing%NViews
-      write(input_num, "(i4)") i
-
-      input_dummy='swansea_p_ap_in_view_no_'//trim(adjustl(input_num))
-      call ncdf_read_packed_array(ncid, trim(adjustl(input_dummy)), &
-           input_data%swansea_p_ap(:,:,i), start = [1, sval])
-      input_dummy='swansea_p_fg_in_view_no_'//trim(adjustl(input_num))
-      call ncdf_read_packed_array(ncid, trim(adjustl(input_dummy)), &
-           input_data%swansea_p_fg(:,:,i), start = [1, sval])
-   end do
-end if
-
-if (indexing%flags%do_cloud) then
-   call ncdf_read_packed_array(ncid, "cot_ap", input_data%cot_ap, &
-        start = [1, sval])
-   call ncdf_read_packed_array(ncid, "cot_fg", input_data%cot_fg, &
-        start = [1, sval])
-
-   call ncdf_read_packed_array(ncid, "cer_ap", input_data%cer_ap, &
-        start = [1, sval])
-   call ncdf_read_packed_array(ncid, "cer_fg", input_data%cer_fg, &
-        start = [1, sval])
-
-   call ncdf_read_packed_array(ncid, "ctp_ap", input_data%ctp_ap, &
-        start = [1, sval])
-   call ncdf_read_packed_array(ncid, "ctp_fg", input_data%ctp_fg, &
-        start = [1, sval])
-
-   call ncdf_read_packed_array(ncid, "stemp_ap", input_data%stemp_ap, &
-        start = [1, sval])
-   call ncdf_read_packed_array(ncid, "stemp_fg", input_data%stemp_fg, &
-        start = [1, sval])
-end if
-
+              input_data%swansea_p_fg(:,:,i), start = [1, sval])
+      end do
+   end if
+   
+   if (indexing%flags%do_cloud) then
+      call ncdf_read_packed_array(ncid, "cot_ap", input_data%cot_ap, &
+           start = [1, sval])
+      call ncdf_read_packed_array(ncid, "cot_fg", input_data%cot_fg, &
+           start = [1, sval])
+      
+      call ncdf_read_packed_array(ncid, "cer_ap", input_data%cer_ap, &
+           start = [1, sval])
+      call ncdf_read_packed_array(ncid, "cer_fg", input_data%cer_fg, &
+           start = [1, sval])
+      
+      call ncdf_read_packed_array(ncid, "ctp_ap", input_data%ctp_ap, &
+           start = [1, sval])
+      call ncdf_read_packed_array(ncid, "ctp_fg", input_data%ctp_fg, &
+           start = [1, sval])
+   end if
+   
+   if ( indexing%flags%do_cloud .or. &
+        (indexing%flags%do_aerosol .and. indexing%NThermal .ge. 2) ) then
+      call ncdf_read_packed_array(ncid, "stemp_ap", input_data%stemp_ap, &
+           start = [1, sval])
+      call ncdf_read_packed_array(ncid, "stemp_fg", input_data%stemp_fg, &
+           start = [1, sval])
+   end if
+   
    do i=1,indexing%Ny
       write(input_num, "(i4)") indexing%Y_Id(i)
 
@@ -152,6 +163,13 @@ end if
            input_data%y0(:,:,i), start = [1, sval])
       call ncdf_read_packed_array(ncid, trim(adjustl(input_dummy2)), &
            input_data%residuals(:,:,i), start = [1, sval])
+
+      if (indexing%flags%do_meas_error) then
+         input_dummy = 'measurement_uncertainty_in_channel_no_'// &
+              trim(adjustl(input_num))
+         call ncdf_read_packed_array(ncid, trim(adjustl(input_dummy)), &
+              input_data%Sy(:,:,i), start = [1, sval])
+      end if
    end do
 
    call ncdf_read_packed_array(ncid, "degrees_of_freedom_signal", &
@@ -194,18 +212,18 @@ subroutine read_input_secondary_optional(ncid, input_data, indexing, &
       end if
    end do
 
-if (indexing%flags%do_cloud .and. read_flags%do_cloud) then
-   do i=1,indexing%NSolar
-      if (indexing%read_optional_channel_field(indexing%YSolar(i))) then
-         write(input_num, "(i4)") indexing%Y_Id(indexing%YSolar(i))
-
-         input_dummy = 'albedo_in_channel_no_'//trim(adjustl(input_num))
-         ii = indexing%ysolar_loop_to_main_index(i)
-         call ncdf_read_packed_array(ncid, trim(adjustl(input_dummy)), &
-              input_data%albedo(:,:,ii), start = [1, sval])
-      end if
-   end do
-end if
+   if (indexing%flags%do_cloud .and. read_flags%do_cloud) then
+      do i=1,indexing%NSolar
+         if (indexing%read_optional_channel_field(indexing%YSolar(i))) then
+            write(input_num, "(i4)") indexing%Y_Id(indexing%YSolar(i))
+            
+            input_dummy = 'albedo_in_channel_no_'//trim(adjustl(input_num))
+            ii = indexing%ysolar_loop_to_main_index(i)
+            call ncdf_read_packed_array(ncid, trim(adjustl(input_dummy)), &
+                 input_data%albedo(:,:,ii), start = [1, sval])
+         end if
+      end do
+   end if
 
 end subroutine read_input_secondary_optional
 

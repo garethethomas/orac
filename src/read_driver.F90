@@ -148,6 +148,13 @@
 ! 2019/08/14, SP: Add Fengyun4A support.
 ! 2021/04/06, AP: New LUT names.
 ! 2022/01/27, GT: Added CTP input file to Ctrl%FID structure.
+! 2023/10/10, GT: Added a check to override an attempt to use the new-LUT
+!                 uncertainty calculation with old text-based LUTs.
+! 2024/04/30, GT: Added layer pressure and surface temperature to aerosol
+!                 state vector, if at least two thermal channels are in the
+!                 measurement vector.
+! 2024/07/26, GT: Renamed module "pavolonis_constants_m", as previous name
+!    violated fortran variable name length limits
 !
 ! Bugs:
 ! None known.
@@ -182,7 +189,7 @@ subroutine Read_Driver(Ctrl, global_atts, source_atts)
 
    use, intrinsic :: iso_fortran_env, only : input_unit, output_unit
 
-   use constants_cloud_typing_pavolonis_m
+   use pavolonis_constants_m
    use Ctrl_m
    use global_attributes_m
    use ORAC_Constants_m
@@ -239,6 +246,8 @@ subroutine Read_Driver(Ctrl, global_atts, source_atts)
    Ctrl%process_cloudy_only    = .true.
    Ctrl%process_aerosol_only   = .false.
    Ctrl%force_nighttime_retrieval = .false.
+   Ctrl%use_new_meas_error     = .true.
+   Ctrl%BoxCar                 = 0
 
 
    !----------------------------------------------------------------------------
@@ -418,10 +427,19 @@ subroutine Read_Driver(Ctrl, global_atts, source_atts)
       end if
    end if
 
+   ! Check if we're using the old text-based LUTs, which do not include
+   ! the new measurement uncertainty characterisation
+   if (len_trim(Ctrl%LUTClass) == 3 .and. Ctrl%use_new_meas_error) then
+      Ctrl%use_new_meas_error     = .false.
+      write(*,*) 'Warning: Using old text-LUTs. Old uncertainty characterisation forced.'
+   end if
+   if (Ctrl%verbose) &
+        write(*,*) 'use_new_meas_error: ', Ctrl%use_new_meas_error
+   
    if (Ctrl%Class == -1) then
       ! Class not set, so deduce it from the LUTClass and/or Approach
       if (Ctrl%Approach == AppCld1L .and. (Ctrl%LUTClass(1:3) == 'WAT' .or. &
-           Ctrl%LUTClass(1:12) == 'liquid-water')) then
+           index(Ctrl%LUTClass, 'liquid-water') .gt. 0)) then
          Ctrl%Class = ClsCldWat
       else if (Ctrl%Approach == AppCld1L .and. (Ctrl%LUTClass(1:3) == 'ICE' .or. &
            Ctrl%LUTClass(1:9) == 'water-ice')) then
@@ -519,15 +537,15 @@ subroutine Read_Driver(Ctrl, global_atts, source_atts)
 
    !----------------------- Ctrl%EqMPN --------------------
    Ctrl%EqMPN%SySelm = switch_app(a, Default=SelmAux)
-   Ctrl%EqMPN%Homog  = switch_app(a, Default=.true.,  Aer=.false.)
-   Ctrl%EqMPN%Coreg  = switch_app(a, Default=.true.,  Aer=.false.)
+   Ctrl%EqMPN%Homog  = switch_app(a, Default=.true., Aer=.false.)
+   Ctrl%EqMPN%Coreg  = switch_app(a, Default=.true., Aer=.false.)
 
    !----------------------- Ctrl%Invpar -------------------
-   Ctrl%Invpar%ConvTest           = switch_app(a, Default=.false., Aer=.true.)
+   Ctrl%Invpar%ConvTest           = switch_app(a, Default=.false., Aer=.false.)
    Ctrl%Invpar%MqStart            = switch_app(a, Default=0.001)
    Ctrl%Invpar%MqStep             = switch_app(a, Default=10.0)
    Ctrl%Invpar%MaxIter            = switch_app(a, Default=40,      Aer=25)
-   Ctrl%Invpar%Ccj                = switch_app(a, Default=0.05,    AerSw=0.001)
+   Ctrl%Invpar%Ccj                = switch_app(a, Default=0.05)!,    AerSw=0.001)
    Ctrl%Invpar%Pc_dmz             = switch_app(a, Default=50.0)
    Ctrl%Invpar%always_take_GN     = switch_app(a, Default=.false., AerOx=.true.)
    Ctrl%Invpar%dont_iter_convtest = switch_app(a, Default=.false., Aer=.true.)
@@ -622,7 +640,8 @@ subroutine Read_Driver(Ctrl, global_atts, source_atts)
    ! interpolation method in ORAC. For a faster but less accurate LUT
    ! interpolation method you could use LUTIntMethLinear.
    Ctrl%LUTIntSelm       = switch_app(a, Default=LUTIntMethBicubic)
-   Ctrl%RTMIntSelm       = switch_app(a, Default=RTMIntMethLinear, Aer=RTMIntMethNone)
+   Ctrl%RTMIntSelm       = switch_app(a, Default=RTMIntMethLinear, Aer=RTMIntMethLinear)
+   Ctrl%RTMIntSelmSW     = switch_app(a, Default=Ctrl%RTMIntSelm, Aer=RTMIntMethNone)
    Ctrl%CloudType        = switch_app(a, Default=1,                Aer=2)
    Ctrl%Max_SDAD         = 10.0
    Ctrl%sabotage_inputs  = .false.
@@ -895,11 +914,12 @@ subroutine Read_Driver(Ctrl, global_atts, source_atts)
    Ctrl%AP(IPc2,:)           = switch_cls(c2,Default=SelmCtrl)
    Ctrl%AP(IFr2,:)           = switch_cls(c2,Default=SelmCtrl)
    Ctrl%AP(ITs,:)            = switch_app(a, Default=SelmAux)
-   Ctrl%AP(IRs(:,IRho_0V),:) = switch_app(a, Default=SelmAux, AerSw=SelmCtrl)
+   Ctrl%AP(IRs(:,IRho_0V),:) = switch_app(a, Default=SelmAux, AerSw=SelmCtrl) ! Orig
+   !Ctrl%AP(IRs(:,IRho_0V),:) = switch_app(a, Default=SelmAux)
    Ctrl%AP(IRs(:,IRho_0D),:) = switch_app(a, Default=SelmAux)
    Ctrl%AP(IRs(:,IRho_DV),:) = switch_app(a, Default=SelmAux)
    Ctrl%AP(IRs(:,IRho_DD),:) = switch_app(a, Default=SelmAux)
-   Ctrl%AP(ISP,:)            = switch_app(a, Default=SelmCtrl)
+   Ctrl%AP(ISP,:)            = switch_app(a, Default=SelmCtrl) ! Orig
    Ctrl%AP(ISG,:)            = switch_app(a, Default=SelmCtrl)
 
    ! NOTES:
@@ -916,11 +936,12 @@ subroutine Read_Driver(Ctrl, global_atts, source_atts)
    Ctrl%FG(IPc2,:)           = switch_cls(c2,Default=SelmCtrl)
    Ctrl%FG(IFr2,:)           = switch_cls(c2,Default=SelmCtrl)
    Ctrl%FG(ITs,:)            = switch_app(a, Default=SelmAux)
-   Ctrl%FG(IRs(:,IRho_0V),:) = switch_app(a, Default=SelmAux, AerSw=SelmCtrl)
+   Ctrl%FG(IRs(:,IRho_0V),:) = switch_app(a, Default=SelmAux, AerSw=SelmCtrl) ! Orig
+   !Ctrl%FG(IRs(:,IRho_0V),:) = switch_app(a, Default=SelmAux)
    Ctrl%FG(IRs(:,IRho_0D),:) = switch_app(a, Default=SelmAux)
    Ctrl%FG(IRs(:,IRho_DV),:) = switch_app(a, Default=SelmAux)
    Ctrl%FG(IRs(:,IRho_DD),:) = switch_app(a, Default=SelmAux)
-   Ctrl%FG(ISP,:)            = switch_app(a, Default=SelmCtrl)
+   Ctrl%FG(ISP,:)            = switch_app(a, Default=SelmCtrl) ! Orig
    Ctrl%FG(ISG,:)            = switch_app(a, Default=SelmCtrl)
    ! 3) Not sure why Fr is now SelmCtrl.
 
@@ -978,7 +999,7 @@ subroutine Read_Driver(Ctrl, global_atts, source_atts)
       Ctrl%X0(IFr2)        = switch_cls(c2,Default=1.0)
    end if
    Ctrl%X0(ITs)            = switch_app(a, Default=300.0)
-   Ctrl%X0(IRs(:,IRho_0V)) = switch_app(a, Default=0.01,  AerSw=0.5)
+   Ctrl%X0(IRs(:,IRho_0V)) = switch_app(a, Default=0.01,  AerSw=0.1)
    Ctrl%X0(IRs(:,IRho_0D)) = switch_app(a, Default=0.01)
    Ctrl%X0(IRs(:,IRho_DV)) = switch_app(a, Default=0.01)
    Ctrl%X0(IRs(:,IRho_DD)) = switch_app(a, Default=0.01)
@@ -1008,12 +1029,17 @@ subroutine Read_Driver(Ctrl, global_atts, source_atts)
       Ctrl%Sx(ITs)         = switch_app(a, Default=1.0e+08)
    end if
 
-   Ctrl%Sx(IRs(:,IRho_0V)) = switch_app(a, Default=1.0e+08, AerSw=1.0)
+   !Ctrl%Sx(IRs(:,IRho_0V)) = switch_app(a, Default=1.0e+08, AerSw=1.0) ! Orig
+   !Ctrl%Sx(IRs(:,IRho_0V)) = switch_app(a, Default=1.0e+08, AerSw=10.0)
+   Ctrl%Sx(IRs(:,IRho_0V)) = switch_app(a, Default=1.0e+08)
    Ctrl%Sx(IRs(:,IRho_0D)) = switch_app(a, Default=1.0e+08)
    Ctrl%Sx(IRs(:,IRho_DV)) = switch_app(a, Default=1.0e+08)
    Ctrl%Sx(IRs(:,IRho_DD)) = switch_app(a, Default=1.0e+08, AerOx=0.05, AerO1=0.01)
-   Ctrl%Sx(ISP(1))         = switch_app(a, Default=1.0e+08, AerSw=0.01)
-   Ctrl%Sx(ISP(2:))        = switch_app(a, Default=1.0e+08, AerSw=0.5)
+   Ctrl%Sx(ISP(1))         = switch_app(a, Default=1.0e+08, AerSw=0.01) ! Orig
+   !Ctrl%Sx(ISP(2:))        = switch_app(a, Default=1.0e+08, AerSw=0.5)  ! Orig
+   !Ctrl%Sx(ISP(1))         = switch_app(a, Default=1.0e+08, AerSw=1.0)
+   !Ctrl%Sx(ISP(2:))        = switch_app(a, Default=1.0e+08, AerSw=1.0)
+   Ctrl%Sx(ISP(2:))        = switch_app(a, Default=1.0e+08)
    Ctrl%Sx(ISG)            = switch_app(a, Default=0.1)
    ! NOTE: The nadir P value doesn't really need to be retrieved.
 
@@ -1049,6 +1075,14 @@ subroutine Read_Driver(Ctrl, global_atts, source_atts)
       Nx_Dy   = 2
       X_Dy(1) = ITau
       X_Dy(2) = IRe
+      if (Ctrl%Ind%NThermal .gt. 1) then
+         ! If we have at least two thermal channels specified in the measurement
+         ! vector, include layer height and surface temperature in the state
+         ! vector.
+         Nx_Dy = Nx_Dy+2
+         X_Dy(Nx_Dy-1) = IPc
+         X_Dy(Nx_Dy)   = ITs
+      end if
       do i = 1, Ctrl%Ind%NSolar
          ! Only accept the first view
          ! ACP: This avoids outputting every view, while keeping the ability to
@@ -1072,6 +1106,14 @@ subroutine Read_Driver(Ctrl, global_atts, source_atts)
       Nx_Dy   = 2
       X_Dy(1) = ITau
       X_Dy(2) = IRe
+      if (Ctrl%Ind%NThermal .gt. 1) then
+         ! If we have at least two thermal channels specified in the measurement
+         ! vector, include layer height and surface temperature in the state
+         ! vector.
+         Nx_Dy = Nx_Dy+2
+         X_Dy(Nx_Dy-1) = IPc
+         X_Dy(Nx_Dy)   = ITs
+      end if
       do i = 1, Ctrl%Ind%NSolar
          ! Only accept the first view
          if (Ctrl%Ind%View_Id(Ctrl%Ind%YSolar(i)) == 1) then
@@ -1097,6 +1139,14 @@ subroutine Read_Driver(Ctrl, global_atts, source_atts)
       Nx_Dy   = 2
       X_Dy(1) = ITau
       X_Dy(2) = IRe
+      if (Ctrl%Ind%NThermal .gt. 1) then
+         ! If we have at least two thermal channels specified in the measurement
+         ! vector, include layer height and surface temperature in the state
+         ! vector.
+         Nx_Dy = Nx_Dy+2
+         X_Dy(Nx_Dy-1) = IPc
+         X_Dy(Nx_Dy)   = ITs
+      end if
       do i = 1, Ctrl%Ind%NSolar
          ! Only accept the first view
          ! ACP: This avoids outputting every view, while keeping the ability to

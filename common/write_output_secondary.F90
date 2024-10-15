@@ -32,6 +32,8 @@
 ! 2015/12/28, AP: Add output fields for aerosol retrievals.
 ! 2016/01/06, AP: Wrap do_* flags into output_flags structure.
 ! 2016/03/04, AP: Homogenisation of I/O modules.
+! 2023/10/10, GT: Added optional output of measurement uncertainties
+! 2024/07/03, GT: Added aerosol-layer height and surface-temperature variables.
 !
 ! Bugs:
 ! None known.
@@ -66,6 +68,23 @@ if (ind%flags%do_aerosol) then
         output_data%aer_ap(ind%X0:,ind%Y0:), 1, 1, ind%Xdim, 1, 1, ind%Ydim)
    call ncdf_write_array(ncid,'aer_fg', output_data%vid_aer_fg, &
         output_data%aer_fg(ind%X0:,ind%Y0:), 1, 1, ind%Xdim, 1, 1, ind%Ydim)
+   
+   if (ind%NThermal .ge. 2) then
+      call ncdf_write_array(ncid,'alp_ap', output_data%vid_alp_ap, &
+           output_data%alp_ap(ind%X0:,ind%Y0:), 1, 1, ind%Xdim, 1, 1, ind%Ydim)
+      call ncdf_write_array(ncid,'alp_fg', output_data%vid_alp_fg, &
+           output_data%alp_fg(ind%X0:,ind%Y0:), 1, 1, ind%Xdim, 1, 1, ind%Ydim)
+      ! Only write stemp data here if it's not going to be done for cloud
+      ! later in this routine.
+      if (.not. ind%flags%do_cloud) then
+         call ncdf_write_array(ncid,'stemp_ap', output_data%vid_stemp_ap, &
+              output_data%stemp_ap(ind%X0:,ind%Y0:), 1, 1, ind%Xdim, 1, 1, &
+              ind%Ydim)
+         call ncdf_write_array(ncid,'stemp_fg', output_data%vid_stemp_fg, &
+              output_data%stemp_fg(ind%X0:,ind%Y0:), 1, 1, ind%Xdim, 1, 1, &
+              ind%Ydim)
+      end if
+   end if
 end if
 
 if (ind%flags%do_rho) then
@@ -159,6 +178,16 @@ end if
            output_data%vid_channels(i), output_data%channels(ind%X0:,:,i), &
            1, 1, ind%Xdim, 1, 1, ind%Ydim)
    end do
+
+   if (ind%flags%do_meas_error) then
+      do i = 1, ind%Ny
+         write(input_num,"(i4)") ind%Y_Id(i)
+         input_dummy='measurement_uncertainty_in_channel_no_'//trim(adjustl(input_num))
+         call ncdf_write_array(ncid, trim(adjustl(input_dummy)), &
+              output_data%vid_Sy(i), output_data%Sy(ind%X0:,:,i), &
+              1, 1, ind%Xdim, 1, 1, ind%Ydim)
+      end do
+   end if
 
    do i = 1, ind%Ny
       write(input_num,"(i4)") ind%Y_Id(i)

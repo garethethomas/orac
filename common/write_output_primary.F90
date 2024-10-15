@@ -47,6 +47,7 @@
 ! 2017/05/17, OS: Added ann phase variables.
 ! 2017/07/05, AP: Add channels_used, variables_retrieved. New QC.
 ! 2018/06/08, SP: Add satellite azimuth angle to output.
+! 2024/03/20, GT: Added aerosol layer height related variables to primary.
 !
 ! Bugs:
 ! None known.
@@ -119,6 +120,39 @@ if (ind%flags%do_aerosol) then
         output_data%vid_aer_uncertainty, &
         output_data%aer_uncertainty(ind%X0:,ind%Y0:), &
         1, 1, ind%Xdim, 1, 1, ind%Ydim)
+
+   if (ind%NThermal .ge. 2) then
+      call ncdf_write_array(ncid,'alp', output_data%vid_alp, &
+           output_data%alp(ind%X0:,ind%Y0:), 1, 1, ind%Xdim, 1, 1, ind%Ydim)
+      call ncdf_write_array(ncid,'alp_uncertainty', &
+           output_data%vid_alp_uncertainty, &
+           output_data%alp_uncertainty(ind%X0:,ind%Y0:), &
+           1, 1, ind%Xdim, 1, 1, ind%Ydim)
+
+      call ncdf_write_array(ncid,'alh', output_data%vid_alh, &
+           output_data%alh(ind%X0:,ind%Y0:), 1, 1, ind%Xdim, 1, 1, ind%Ydim)
+      call ncdf_write_array(ncid,'alh_uncertainty', &
+           output_data%vid_alh_uncertainty, &
+           output_data%alh_uncertainty(ind%X0:,ind%Y0:), &
+           1, 1, ind%Xdim, 1, 1, ind%Ydim)
+
+      call ncdf_write_array(ncid,'alt', output_data%vid_alt, &
+           output_data%alt(ind%X0:,ind%Y0:), 1, 1, ind%Xdim, 1, 1, ind%Ydim)
+      call ncdf_write_array(ncid,'alt_uncertainty', &
+           output_data%vid_alt_uncertainty, &
+           output_data%alt_uncertainty(ind%X0:,ind%Y0:), &
+           1, 1, ind%Xdim, 1, 1, ind%Ydim)
+      ! Only write stemp data here if it's not going to be done for cloud
+      ! later in this routine.
+      if (.not. ind%flags%do_cloud) then
+         call ncdf_write_array(ncid,'stemp', output_data%vid_stemp, &
+              output_data%stemp(ind%X0:,ind%Y0:), 1, 1, ind%Xdim, 1, 1, ind%Ydim)
+         call ncdf_write_array(ncid,'stemp_uncertainty', &
+              output_data%vid_stemp_uncertainty, &
+              output_data%stemp_uncertainty(ind%X0:,ind%Y0:), &
+              1, 1, ind%Xdim, 1, 1, ind%Ydim)
+      end if
+   end if
 end if
 
 if (ind%flags%do_rho) then

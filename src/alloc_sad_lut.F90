@@ -11,6 +11,7 @@
 ! 2017/01/17, GM: Eliminate the unnecessary indexing of the LUT grid wrt LUT
 !    type and channel.
 ! 2021/03/08, AP: Gather grid dimensions into LUT_Grid_t
+! 2024/06/19, GT: Added SurfP to LUT_Grid (Surface pressure dimension)
 !
 ! Bugs:
 ! None known.
@@ -47,12 +48,14 @@ subroutine Alloc_LUT_Grid(LUT_Grid)
    LUT_Grid%SolZen%NMax = 20
    LUT_Grid%SatZen%NMax = 20
    LUT_Grid%RelAzi%NMax = 20
+   LUT_Grid%SurfP%NMax  = 10
 
    allocate(LUT_Grid%Tau%x(LUT_Grid%Tau%NMax))
    allocate(LUT_Grid%Re%x(LUT_Grid%Re%NMax))
    allocate(LUT_Grid%Solzen%x(LUT_Grid%SolZen%NMax))
    allocate(LUT_Grid%Satzen%x(LUT_Grid%SatZen%NMax))
    allocate(LUT_Grid%Relazi%x(LUT_Grid%RelAzi%NMax))
+   allocate(LUT_Grid%SurfP%x(LUT_Grid%SurfP%NMax))
 
 end subroutine Alloc_LUT_Grid
 

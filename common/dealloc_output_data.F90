@@ -33,6 +33,8 @@
 ! 2017/05/17, OS: Added ann phase variables.
 ! 2017/07/05, AP: Add channels_used, variables_retrieved. New QC.
 ! 2018/06/08, SP: Add satellite azimuth angle to output.
+! 2024/03/20, GT: Added aerosol layer height related variables to primary.
+! 2024/07/03, GT: Added aerosol-layer height variables to secondary.
 !
 ! Bugs:
 ! None known.
@@ -94,6 +96,13 @@ subroutine dealloc_output_data_primary(data)
    if (associated(data%diffuse_frac))     deallocate(data%diffuse_frac)
    if (associated(data%diffuse_frac_uncertainty)) &
                                           deallocate(data%diffuse_frac_uncertainty)
+
+   if (associated(data%alp))              deallocate(data%alp)
+   if (associated(data%alp_uncertainty))  deallocate(data%alp_uncertainty)
+   if (associated(data%alh))              deallocate(data%alh)
+   if (associated(data%alh_uncertainty))  deallocate(data%alh_uncertainty)
+   if (associated(data%alt))              deallocate(data%alt)
+   if (associated(data%alt_uncertainty))  deallocate(data%alt_uncertainty)
 
    if (associated(data%vid_cloud_albedo)) deallocate(data%vid_cloud_albedo)
    if (associated(data%vid_cloud_albedo_uncertainty)) &
@@ -228,6 +237,8 @@ subroutine dealloc_output_data_secondary(data)
    if (associated(data%aot550_fg))        deallocate(data%aot550_fg)
    if (associated(data%aer_ap))           deallocate(data%aer_ap)
    if (associated(data%aer_fg))           deallocate(data%aer_fg)
+   if (associated(data%alp_ap))           deallocate(data%alp_ap)
+   if (associated(data%alp_fg))           deallocate(data%alp_fg)
 
    if (associated(data%vid_rho_ap))       deallocate(data%vid_rho_ap)
    if (associated(data%vid_rho_fg))       deallocate(data%vid_rho_fg)
@@ -271,6 +282,15 @@ subroutine dealloc_output_data_secondary(data)
    deallocate(data%channels_vmin)
    deallocate(data%channels_vmax)
    deallocate(data%channels)
+
+   if (associated(data%Sy)) then
+      deallocate(data%Sy)
+      deallocate(data%vid_Sy)
+      deallocate(data%Sy_scale)
+      deallocate(data%Sy_offset)
+      deallocate(data%Sy_vmin)
+      deallocate(data%Sy_vmax)
+   end if
 
    deallocate(data%vid_y0)
    deallocate(data%y0_scale)

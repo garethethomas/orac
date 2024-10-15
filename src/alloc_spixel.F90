@@ -66,6 +66,7 @@
 ! 2015/06/02, AP: Add aerosol fields.
 ! 2015/08/19, AP: Make reading of RTM terms optional.
 ! 2018/06/08, SP: Add satellite azimuth angle to output.
+! 2024/10/01, GT: Add SPixel%Surface%Emis
 !
 ! Bugs:
 ! None known.
@@ -151,6 +152,7 @@ subroutine Alloc_SPixel(Ctrl, RTM, SPixel)
       allocate(SPixel%Surface%Ratios (Ctrl%Ind%NSolar, MaxRho_XX))
    end if
    allocate(SPixel%Surface%XIndex    (Ctrl%Ind%NSolar, MaxRho_XX))
+   allocate(SPixel%Surface%Emis      (Ctrl%Ind%NThermal))
 
    !  Solar constant (Reallocated in GetSPixel)
 

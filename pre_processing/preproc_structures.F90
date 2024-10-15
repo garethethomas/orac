@@ -105,6 +105,7 @@ module preproc_structures_m
       logical                    :: do_cloud_emis
       logical                    :: do_cloud_type
       logical                    :: do_ironly
+      logical                    :: do_dust_correction
       integer                    :: nwp_nlevels
       integer                    :: ecmwf_time_int_method
       integer, pointer           :: channel_ids(:)
@@ -127,7 +128,6 @@ module preproc_structures_m
       character(len=path_length) :: occci_path
       character(len=path_length) :: product_name
       type(preproc_nwp_fnames_t) :: nwp_fnames
-
    end type preproc_opts_t
 
    ! ecmwf profiles and surface fields (prtm data)
