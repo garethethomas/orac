@@ -39,6 +39,7 @@
 ! 2017/06/22, OS: Added phase variables.
 ! 2017/07/05, AP: Add channels_used, variables_retrieved. New QC.
 ! 2018/06/08, SP: Add satellite azimuth angle to output.
+! 2021/11/21, GT: Added read_input_primary_classify subroutine
 ! 2024/07/03, GT: Added aerosol-layer height and surface-temperature variables.
 !
 ! Bugs:
@@ -324,7 +325,7 @@ subroutine read_input_primary_optional(ncid, input_data, indexing, read_flags, &
    character(len=32)  :: input_num
    character(len=512) :: input_dummy
 
-   do i=1,indexing%NViews
+   do i = 1, indexing%NViews
       if (indexing%read_optional_view_field(i)) then
          write(input_num,"(i1)") i
          ii = indexing%view_loop_to_main_index(i)
@@ -512,7 +513,7 @@ subroutine read_input_primary_once(nfile, fname, input_data, indexing, &
 
    call ncdf_close(ncid, 'read_input_primary_once()')
 
-   do i=2,nfile
+   do i = 2, nfile
       call ncdf_open(ncid, fname(i), 'read_input_primary_once()')
       call read_input_primary_optional(ncid, input_data, loop_ind(i), &
            read_flags, sval, verbose)
@@ -585,5 +586,3 @@ subroutine read_input_primary_classify(fname, input_data, indexing, read_cost, &
    call ncdf_close(ncid, 'read_input_primary_class()')
 
 end subroutine read_input_primary_classify
-
-

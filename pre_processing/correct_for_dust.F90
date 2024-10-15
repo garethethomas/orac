@@ -11,6 +11,7 @@
 !
 ! History:
 ! 2024/03/11, GT: Initial version
+! 2024/07/01, DH: Change indexing to use preproc_dims for all dimensions
 !
 ! Bugs:
 ! None known.
@@ -38,8 +39,8 @@ subroutine correct_for_dust(channel_info, imager_measurements, imager_angles, &
   ! Local variables
   integer(kind=lint)                      :: i, j
   integer(kind=lint)                      :: bt11=-1, bt12=-1
-  integer, dimension( size(imager_pavolonis%cldmask,1), &
-                      size(imager_pavolonis%cldmask,2) ) :: dustmask 
+  integer, dimension( imager_geolocation%startx:imager_geolocation%endx, &
+        1:imager_geolocation%ny )         :: dustmask 
   integer, dimension(5,5) :: kernel=reshape( (/ 0, 1, 1, 1, 0, &
                                                 1, 1, 1, 1, 1, &
                                                 1, 1, 1, 1, 1, &
@@ -82,7 +83,7 @@ subroutine correct_for_dust(channel_info, imager_measurements, imager_angles, &
      ! two new values to the Pavalonis cloud-type mask, one indicating where
      ! we think a clear pixel is dust, and where previously flagged cloud
      ! has been switched to dust
-     do i=1, size(imager_pavolonis%cldmask,1)
+     do i=imager_geolocation%startx, imager_geolocation%endx
         do j=1, size(imager_pavolonis%cldmask,2)
            if (dustmask(i,j) .eq. 1)  then 
               if (maxval(imager_pavolonis%cldmask(i,j,:)) .eq. 1) then

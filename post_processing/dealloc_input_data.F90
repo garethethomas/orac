@@ -12,9 +12,9 @@
 !
 ! History:
 ! 2012/02/03, MJ: Cleans out prototype code to prepare repository upload.
-! 15/02/2012, CP: To do level 2 post processing
-! 07/03/2012, MS: Added missing stemp_ap
-! 07/03/2012, CP: Cleaned up
+! 2012/02/15, CP: To do level 2 post processing
+! 2012/03/07, MS: Added missing stemp_ap
+! 2012/03/07, CP: Cleaned up
 ! 2012/03/18, CP: Modified to add cloud flag
 ! 2012/06/20, CP: Added albedo
 ! 2012/07/04, MJ: Fixed several data type bugs
@@ -40,6 +40,7 @@
 ! 2017/07/05, AP: Add channels_used, variables_retrieved. New QC.
 ! 2018/06/08, SP: Add satellite azimuth angle to output.
 ! 2023/10/10, GT: Added measurement uncertainties to secondary data
+! 2023/11/21, GT: Added dealloc_input_data_primary_classify subroutine.
 ! 2024/07/03, GT: Added aerosol-layer height variables.
 !
 ! Bugs:

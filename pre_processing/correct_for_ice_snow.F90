@@ -15,6 +15,7 @@
 !                struct      (defined in imager_structures)
 ! preproc_dims   struct in   Preprocessing dimensions, including sw and
 !                            lw channel counts
+! preproc_geoloc struct in   Summary of preprocessing lat/lon
 ! surface        struct both Surface properties structure
 ! cyear          string in   Year, as a 4 character string.
 ! cmonth         string in   Month of year, as a 2 character string.
@@ -92,6 +93,7 @@
 ! 2016/02/18, OS: ECMWF snow/ice mask now corrected by USGS land/sea mask
 ! 2016/02/23, OS: previous commit on ECMWF snow/ice mask was incomplete
 ! 2018/10/01, SP: Introduce a more comprehensive snow albedo dataset
+! 2024/07/01, DH: Change indexing to use preproc_dims for all dimensions
 ! 2024/07/26, GT: Renamed module "pavolonis_constants_m", as previous name
 !    violated fortran variable name length limits
 !
@@ -374,8 +376,8 @@ subroutine correct_for_ice_snow(nise_path, imager_geolocation, surface, cyear, &
                      ! Check the value of each neighbouring nise extent pixel
                      ! to the current coast one. If they aren't bad pixels
                      ! themselves, include them in the values to average.
-                     do m=-1, 1
-                        do n=-1, 1
+                     do m = -1, 1
+                        do n = -1, 1
                            if (nise%north%extent(xi+k+n,yi+l+m) .lt. 250.0) then
                               count = count+1
                               nise_tmp2(count) = &
@@ -445,8 +447,8 @@ subroutine correct_for_ice_snow(nise_path, imager_geolocation, surface, cyear, &
                      ! Check the value of each neighbouring nise extent pixel
                      ! to the current coast one. If they aren't bad pixels
                      ! themselves, include them in the values to average.
-                     do m=-1, 1
-                        do n=-1, 1
+                     do m = -1, 1
+                        do n = -1, 1
                            if (nise%south%extent(xi+k+n,yi+l+m) .lt. 250.0) then
                               count = count+1
                               nise_tmp2(count) = &
@@ -588,7 +590,7 @@ end subroutine apply_ice_correction
 !------------------------------------------------------------------------------
 
 subroutine correct_for_ice_snow_nwp(nwp_path, imager_geolocation, &
-     channel_info, imager_flags, preproc_dims, preproc_prtm, surface, &
+     channel_info, imager_flags, preproc_dims, preproc_prtm, preproc_geoloc, surface, &
      include_full_brdf, source_atts, verbose)
 
    use channel_structures_m
@@ -608,6 +610,7 @@ subroutine correct_for_ice_snow_nwp(nwp_path, imager_geolocation, &
    type(imager_flags_t),       intent(in)    :: imager_flags
    type(preproc_dims_t),       intent(in)    :: preproc_dims
    type(preproc_prtm_t),       intent(in)    :: preproc_prtm
+   type(preproc_geoloc_t),     intent(in)    :: preproc_geoloc
    logical,                    intent(in)    :: include_full_brdf
    type(source_attributes_t),  intent(inout) :: source_atts
    logical,                    intent(in)    :: verbose
@@ -651,18 +654,15 @@ subroutine correct_for_ice_snow_nwp(nwp_path, imager_geolocation, &
               imager_geolocation%longitude(i,j) .eq. sreal_fill_value) cycle
 
          ! find grid cell coordinates into which L1b pixel falls
-         lon_i = floor((imager_geolocation%longitude(i,j) + &
-              preproc_dims%lon_offset)*preproc_dims%dellon, kind=lint) + 1
-         lat_j = floor((imager_geolocation%latitude(i,j) + &
-              preproc_dims%lat_offset)*preproc_dims%dellat, kind=lint) + 1
-
-         if (lon_i .lt. preproc_dims%min_lon) lon_i = preproc_dims%min_lon
-         if (lat_j .lt. preproc_dims%min_lat) lat_j = preproc_dims%min_lat
-         if (lon_i .gt. preproc_dims%max_lon) lon_i = preproc_dims%max_lon
-         if (lat_j .gt. preproc_dims%max_lat) lat_j = preproc_dims%max_lat
+         lat_j = minloc(abs(preproc_geoloc%latitude - imager_geolocation%latitude(i,j)),1)
+         lon_i = minloc(abs(preproc_geoloc%longitude - imager_geolocation%longitude(i,j)),1)
+         if (imager_geolocation%longitude(i,j) .lt. minval(preproc_geoloc%longitude)) lon_i = 1
+         if (imager_geolocation%latitude(i,j) .lt. minval(preproc_geoloc%latitude)) lat_j = 1
+         if (imager_geolocation%longitude(i,j) .gt. maxval(preproc_geoloc%longitude)) lon_i = preproc_dims%xdim
+         if (imager_geolocation%latitude(i,j) .gt. maxval(preproc_geoloc%latitude)) lat_j = preproc_dims%ydim
 
          tmp_albedo = surface%albedo(i,j,:)
-
+         
          if ( &
               ((preproc_prtm%snow_depth(lon_i,lat_j)    .gt. snow_threshold) .and. &
                (imager_flags%lsflag(i,j)         .eq. 1_byte)) .or. &

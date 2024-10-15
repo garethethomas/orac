@@ -196,7 +196,7 @@ subroutine read_input_secondary_optional(ncid, input_data, indexing, &
    character(len=32)  :: input_num
    character(len=512) :: input_dummy
 
-   do i=1,indexing%Ny
+   do i = 1, indexing%Ny
       if (indexing%read_optional_channel_field(i)) then
          write(input_num, "(i4)") indexing%Y_Id(i)
 
@@ -257,7 +257,7 @@ subroutine read_input_secondary_once(nfile, fname, input_data, indexing, &
 
    call ncdf_close(ncid, 'read_input_secondary_once()')
 
-   do i=2,nfile
+   do i = 2, nfile
       call ncdf_open(ncid, fname(i), 'read_input_secondary_once()')
       call read_input_secondary_optional(ncid, input_data, loop_ind(i), &
            read_flags, sval, verbose)

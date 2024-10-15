@@ -12,9 +12,9 @@
 !
 ! History:
 ! 2012/02/03, MJ: Cleans out prototype code to prepare repository upload.
-! 15/02/2012, CP: To do level 2 post processing
-! 07/03/2012, MS: Added missing stemp_ap
-! 07/03/2012, CP: Cleaned up
+! 2012/02/15, CP: To do level 2 post processing
+! 2012/03/07, MS: Added missing stemp_ap
+! 2012/03/07, CP: Cleaned up
 ! 2012/03/18, CP: Modified to add cloud flag
 ! 2012/06/20, CP: Added albedo
 ! 2012/07/04, MJ: Fixed several data type bugs
@@ -43,6 +43,8 @@
 ! 2018/06/08, SP: Add satellite azimuth angle to output.
 ! 2023/10/10, GT: Added measurement uncertainties to secondary data
 ! 2023/07/03, GT: Added aerosol-layer height and surface-temperature variables.
+! 2023/11/21, GT: Added alloc_input_data_classify() subroutine.
+! 2024/03/07, GT: Removed unused alloc_input_data_only_cost() subroutine.
 !
 ! Bugs:
 ! None known.
@@ -65,6 +67,13 @@ subroutine alloc_input_data_classify(ind, data, read_cost, read_ctt)
    else
       nullify(data%costja)
       nullify(data%costjm)
+   end if
+
+   if (read_ctt) then
+      allocate(data%ctt(ind%X0:ind%X1, ind%Y0:ind%Y1))
+      data%costja = sreal_fill_value
+   else
+      nullify(data%ctt)
    end if
 
    if (read_ctt) then

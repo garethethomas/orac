@@ -48,7 +48,7 @@
 ! Name Type In/Out/Both Description
 !
 ! History:
-! 09/02/2012, CP: Original version. Needs modifying to work with AATSR/AVHRR
+! 2012/02/09, CP: Original version. Needs modifying to work with AATSR/AVHRR
 !    does not output covariance information into secondary output file.  Have
 !    not included cloud mask at present.
 ! 2012/03/18, CP: Modified to add cloud flag
@@ -555,9 +555,9 @@ subroutine orac_postproc(mytask, ntasks, lower_bound, upper_bound, &
                use_bayesian_selection, switch_phases, & ! Selects which data to read
                chunk_starts(i_chunk), verbose)
        end do
-       
-       do j=indexing%Y0, indexing%Y1
-          do i=indexing%X0, indexing%X1
+
+       do j = indexing%Y0, indexing%Y1
+          do i = indexing%X0, indexing%X1
              if (use_bayesian_selection) then
                 ! Find the input file with the lowest cost for each pixel
                 sum_prob = 0.0
@@ -656,8 +656,8 @@ subroutine orac_postproc(mytask, ntasks, lower_bound, upper_bound, &
                         input_primary(IIce)%ctt(i,j) < switch_ice_limit))) then
                       phase_flag = 2_byte
                       input_primary(0)%cldtype(i,j,1) = SWITCHED_TO_ICE_TYPE
-                      ! ice to water
-                   elseif ((phase_flag == 2_byte) .and. &
+                   ! ice to water
+                   else if ((phase_flag == 2_byte) .and. &
                         ((input_primary(IWat)%ctt(i,j) /= sreal_fill_value .and. &
                         input_primary(IWat)%ctt(i,j) >= switch_wat_limit) .and. &
                         (input_primary(IIce)%ctt(i,j) /= sreal_fill_value .and. &
@@ -746,8 +746,8 @@ subroutine orac_postproc(mytask, ntasks, lower_bound, upper_bound, &
             global_atts, verbose)
 
        ! Put results in final output arrays with final datatypes
-       do j=indexing%Y0, indexing%Y1
-          do i=indexing%X0, indexing%X1
+       do j = indexing%Y0, indexing%Y1
+          do i = indexing%X0, indexing%X1
              call prepare_output_primary_pp(i, j, indexing%common_indices_t, &
                   input_primary(0), output_primary, &
                   output_optical_props_at_night)
@@ -765,7 +765,7 @@ subroutine orac_postproc(mytask, ntasks, lower_bound, upper_bound, &
           end if
        end if
 
-    end do !End of chunking loop
+    end do ! End of chunking loop
 
     indexing%Y0=1
 

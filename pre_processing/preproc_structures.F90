@@ -30,6 +30,7 @@
 ! 2018/11/05, SP: Add CAPE
 ! 2021/03/09, AP: Consolidate path arguments into preproc_paths_t structure
 ! 2021/03/10, AP: Consolidate paths/dates into setup_args_t structure
+! 2024/07/01, DH: Add option for using native ecmwf grid for preprocessing
 !
 ! Bugs:
 ! None known.
@@ -45,6 +46,7 @@ module preproc_structures_m
       integer(kind=lint) :: xdim, ydim, kdim
       integer(kind=lint) :: nchan_sw, nchan_lw
       integer(kind=lint) :: min_lat, max_lat, min_lon, max_lon
+      integer(kind=lint) :: min_lat_ind, max_lat_ind, min_lon_ind, max_lon_ind
       real(kind=sreal)   :: dellon, dellat
 
       real(kind=sreal)   :: lat_offset=90.0, lon_offset=180.0
@@ -121,6 +123,10 @@ module preproc_structures_m
       logical                    :: use_predef_geo
       logical                    :: use_predef_lsm
       logical                    :: use_swansea_climatology
+      logical                    :: use_seviri_ann_cma_cph
+      logical                    :: use_seviri_ann_ctp_fg
+      logical                    :: use_seviri_ann_mlay
+      logical                    :: use_ecmwf_preproc_grid
       integer                    :: mcd43_max_qaflag
 
       character(len=path_length) :: ext_lsm_path
@@ -176,15 +182,17 @@ module preproc_structures_m
       character(len=file_length) :: msi_file    ! Radiances/brightness temps
       character(len=file_length) :: prtm_file   ! Atmospheric RTTOV inputs
       character(len=file_length) :: swrtm_file  ! Shortwave RTTOV inputs
+      character(len=file_length) :: ctp_file    ! CTP for first guess
    end type preproc_paths_t
 
 
    type setup_args_t
-      character(len=path_length)     :: l1b_file ! Path to satellite swath
-      character(len=path_length)     :: geo_file ! Path to geolocation data
+      character(len=path_length)     :: l1b_file     ! Path to satellite swath
+      character(len=path_length)     :: geo_file     ! Path to geolocation data
 
-      character(len=sensor_length)   :: sensor   ! Name of instrument
-      character(len=platform_length) :: platform ! Name of satellite it is on
+      character(len=sensor_length)   :: sensor       ! Name of instrument
+      character(len=sensor_length)   :: sensor_rdr   ! Name of data reader
+      character(len=platform_length) :: platform     ! Name of satellite it is on
       ! Date as strings
       character(len=date_length)     :: cyear, cmonth, cday
       character(len=date_length)     :: cdoy, chour, cminute, csecond

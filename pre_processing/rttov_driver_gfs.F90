@@ -61,6 +61,7 @@
 !                 with the allocation statements for these arrays and
 !                 RTTOV documentation. (nevals was not used anywhere
 !                 else and wasn't even initialised to any value!)
+! 2024/07/01, DH: Change indexing to use preproc_dims for all dimensions
 !
 ! Bugs:
 ! - BRDF not yet implemented here, so RTTOV internal calculation used.
@@ -243,19 +244,19 @@ subroutine rttov_driver_gfs(coef_path, emiss_path, granule, preproc_dims, &
          stop error_stop_code
       end if
    case('AVHRR')
-      if (index(granule%platform, 'noaa') >= 1) then
-         if(granule%platform(5:5) == '1') then
-            coef_file_vis = 'rtcoef_noaa_'//granule%platform(5:6)//'_avhrr_o3co2.dat'
-            coef_file_ir = 'rtcoef_noaa_'//granule%platform(5:6)//'_avhrr_o3co2_ironly.dat'
+      if (granule%platform(1:4) == 'NOAA') then
+         if (len_trim(granule%platform(6:)) > 1) then
+            coef_file_vis = 'rtcoef_noaa_'//granule%platform(6:7)//'_avhrr_o3co2.dat'
+            coef_file_ir = 'rtcoef_noaa_'//granule%platform(6:7)//'_avhrr_o3co2_ironly.dat'
           else
-            coef_file_vis = 'rtcoef_noaa_'//granule%platform(5:5)//'_avhrr_o3co2.dat'
-            coef_file_ir = 'rtcoef_noaa_'//granule%platform(5:5)//'_avhrr_o3co2_ironly.dat'
+            coef_file_vis = 'rtcoef_noaa_'//granule%platform(6:6)//'_avhrr_o3co2.dat'
+            coef_file_ir = 'rtcoef_noaa_'//granule%platform(6:6)//'_avhrr_o3co2_ironly.dat'
           end if
-       else if (index(granule%platform, 'metop') >= 1) then
-          if (granule%platform(6:6) == "a") then
+       else if (granule%platform(1:5) == 'Metop') then
+          if (granule%platform(7:7) == "A") then
              coef_file_vis = 'rtcoef_metop_2_avhrr_o3co2.dat'
              coef_file_ir = 'rtcoef_metop_2_avhrr_o3co2_ironly.dat'
-          else if (granule%platform(6:6) == "b") then
+          else if (granule%platform(7:7) == "B") then
              coef_file_vis = 'rtcoef_metop_1_avhrr_o3co2.dat'
              coef_file_ir = 'rtcoef_metop_1_avhrr_o3co2_ironly.dat'
           else
@@ -280,17 +281,35 @@ subroutine rttov_driver_gfs(coef_path, emiss_path, granule, preproc_dims, &
                     trim(granule%platform)
          stop error_stop_code
       end if
+   case('FCI')
+      if (trim(granule%platform) == 'MTG-I1') then
+         coef_file_vis = 'rtcoef_mtg_1_fci_o3co2.dat'
+         coef_file_ir = 'rtcoef_mtg_1_fci_o3co2_ironly.dat'
+      else if (trim(granule%platform) == 'MTG-I2') then
+         coef_file_vis = 'rtcoef_mtg_2_fci_o3co2.dat'
+         coef_file_ir = 'rtcoef_mtg_2_fci_o3co2_ironly.dat'
+      else if (trim(granule%platform) == 'MTG-I3') then
+         coef_file_vis = 'rtcoef_mtg_3_fci_o3co2.dat'
+         coef_file_ir = 'rtcoef_mtg_3_fci_o3co2_ironly.dat'
+      else if (trim(granule%platform) == 'MTG-I4') then
+         coef_file_vis = 'rtcoef_mtg_4_fci_o3co2.dat'
+         coef_file_ir = 'rtcoef_mtg_4_fci_o3co2_ironly.dat'
+      else
+         write(*,*) 'ERROR: rttov_driver(): Invalid FCI platform: ', &
+                    trim(granule%platform)
+         stop error_stop_code
+      endif
    case('SEVIRI')
-      if (trim(granule%platform) == 'MSG1') then
+      if (trim(granule%platform) == 'MSG-1') then
          coef_file_vis = 'rtcoef_msg_1_seviri_o3co2.dat'
          coef_file_ir = 'rtcoef_msg_1_seviri_o3co2_ironly.dat'
-      else if (trim(granule%platform) == 'MSG2') then
+      else if (trim(granule%platform) == 'MSG-2') then
          coef_file_vis = 'rtcoef_msg_2_seviri_o3co2.dat'
          coef_file_ir = 'rtcoef_msg_2_seviri_o3co2_ironly.dat'
-      else if (trim(granule%platform) == 'MSG3') then
+      else if (trim(granule%platform) == 'MSG-3') then
          coef_file_vis = 'rtcoef_msg_3_seviri_o3co2.dat'
          coef_file_ir = 'rtcoef_msg_3_seviri_o3co2_ironly.dat'
-      else if (trim(granule%platform) == 'MSG4') then
+      else if (trim(granule%platform) == 'MSG-4') then
          coef_file_vis = 'rtcoef_msg_4_seviri_o3co2.dat'
          coef_file_ir = 'rtcoef_msg_4_seviri_o3co2_ironly.dat'
       else
@@ -299,10 +318,10 @@ subroutine rttov_driver_gfs(coef_path, emiss_path, granule, preproc_dims, &
          stop error_stop_code
       end if
    case('SLSTR')
-      if (trim(granule%platform) == 'Sentinel3a') then
+      if (trim(granule%platform) == 'Sentinel-3a') then
          coef_file_vis = 'rtcoef_sentinel3_1_slstr_o3co2.dat'
          coef_file_ir = 'rtcoef_sentinel3_1_slstr_o3co2_ironly.dat'
-      else if (trim(granule%platform) == 'Sentinel3b') then
+      else if (trim(granule%platform) == 'Sentinel-3b') then
          coef_file_vis = 'rtcoef_sentinel3_2_slstr_o3co2.dat'
          coef_file_ir = 'rtcoef_sentinel3_2_slstr_o3co2_ironly.dat'
       else
@@ -311,10 +330,10 @@ subroutine rttov_driver_gfs(coef_path, emiss_path, granule, preproc_dims, &
          stop error_stop_code
       end if
    case('VIIRSI')
-      if (trim(granule%platform) == 'SuomiNPP') then
+      if (trim(granule%platform) == 'Suomi-NPP') then
          coef_file_vis = 'rtcoef_jpss_0_viirs_o3co2.dat'
          coef_file_ir = 'rtcoef_jpss_0_viirs_o3co2_ironly.dat'
-      else if (trim(granule%platform) == 'NOAA20') then
+      else if (trim(granule%platform) == 'NOAA-20') then
          coef_file_vis = 'rtcoef_noaa_20_viirs_o3co2.dat'
          coef_file_ir = 'rtcoef_noaa_20_viirs_o3co2_ironly.dat'
       else
@@ -323,10 +342,10 @@ subroutine rttov_driver_gfs(coef_path, emiss_path, granule, preproc_dims, &
          stop error_stop_code
       end if
    case('VIIRSM')
-      if (trim(granule%platform) == 'SuomiNPP') then
+      if (trim(granule%platform) == 'Suomi-NPP') then
          coef_file_vis = 'rtcoef_jpss_0_viirs_o3co2.dat'
          coef_file_ir = 'rtcoef_jpss_0_viirs_o3co2_ironly.dat'
-      else if (trim(granule%platform) == 'NOAA20') then
+      else if (trim(granule%platform) == 'NOAA-20') then
          coef_file_vis = 'rtcoef_noaa_20_viirs_o3co2.dat'
          coef_file_ir = 'rtcoef_noaa_20_viirs_o3co2_ironly.dat'
       else
@@ -456,8 +475,8 @@ subroutine rttov_driver_gfs(coef_path, emiss_path, granule, preproc_dims, &
    ! Copy preprocessing grid data into RTTOV profile structure
    ! Create a lowest layer from the surface properties
    count = 0
-   do jdim = preproc_dims%min_lat, preproc_dims%max_lat
-      do idim = preproc_dims%min_lon, preproc_dims%max_lon
+   do jdim = 1, preproc_dims%ydim
+      do idim = 1, preproc_dims%xdim
          count = count + 1
 
          ! set gas units to 1, specifying gas input in kg/kg
@@ -512,8 +531,8 @@ subroutine rttov_driver_gfs(coef_path, emiss_path, granule, preproc_dims, &
 
          ! Write profiles structure to PRTM file (array operations needed to
          ! recast structure in form ncdf_write_array recognises)
-         i_ = idim - preproc_dims%min_lon + 1
-         j_ = jdim - preproc_dims%min_lat + 1
+         i_ = idim
+         j_ = jdim
          call ncdf_write_array(netcdf_info%ncid_prtm, 'lon_rtm', &
               netcdf_info%vid_lon_pw, &
               (/profiles(count)%longitude/), &
@@ -559,8 +578,8 @@ subroutine rttov_driver_gfs(coef_path, emiss_path, granule, preproc_dims, &
       if (verbose) write(*,*) ' - Calculating for viewing geometry number', cview
 
       count = 0
-      do jdim = preproc_dims%min_lat, preproc_dims%max_lat
-         do idim = preproc_dims%min_lon, preproc_dims%max_lon
+      do jdim = 1, preproc_dims%ydim
+         do idim = 1, preproc_dims%xdim
             count = count + 1
             profiles(count)%zenangle = preproc_geo%satza(idim,jdim,cview)
             profiles(count)%azangle = preproc_geo%satazi(idim,jdim,cview)
@@ -687,8 +706,8 @@ subroutine rttov_driver_gfs(coef_path, emiss_path, granule, preproc_dims, &
          if ((verbose) .and. i_coef .eq. 1) write(*,*) 'Run RTTOV Longwave'
          if ((verbose) .and. i_coef .eq. 2) write(*,*) 'Run RTTOV Shortwave'
 #endif
-         do jdim = preproc_dims%min_lat, preproc_dims%max_lat
-            do idim = preproc_dims%min_lon, preproc_dims%max_lon
+         do jdim = 1, preproc_dims%ydim
+            do idim = 1, preproc_dims%xdim
                count = count + 1
 
                ! Process points that contain information and satisfy the zenith
@@ -752,16 +771,16 @@ subroutine rttov_driver_gfs(coef_path, emiss_path, granule, preproc_dims, &
                   if (i_coef == 1) then
                      do i_ = 1, nchan
                         call write_ir_rttov(netcdf_info, &
-                             idim-preproc_dims%min_lon+1, &
-                             jdim-preproc_dims%min_lat+1, &
+                             idim, &
+                             jdim, &
                              profiles(count)%nlevels, emissivity, transmission, &
                              radiance, radiance2, write_rttov, chan_pos(i_), i_)
                      end do
                   else
                      do i_ = 1, nchan
                         call write_solar_rttov(netcdf_info, coefs, &
-                             idim-preproc_dims%min_lon+1, &
-                             jdim-preproc_dims%min_lat+1, &
+                             idim, &
+                             jdim, &
                              profiles(count)%nlevels, profiles(count)%zenangle, &
                              transmission, write_rttov, chan_pos(i_), i_)
                      end do
@@ -779,8 +798,8 @@ subroutine rttov_driver_gfs(coef_path, emiss_path, granule, preproc_dims, &
 #else
             if (verbose) write(*,*) 'Run RTTOV for cloud'
 #endif
-               do jdim = preproc_dims%min_lat, preproc_dims%max_lat
-                  do idim = preproc_dims%min_lon, preproc_dims%max_lon
+               do jdim = 1, preproc_dims%ydim
+                  do idim = 1, preproc_dims%xdim
                      count = count + 1
                      profiles(count)%cfraction = 1.
                      profiles(count)%ctp = preproc_prtm%trop_p(idim,jdim)

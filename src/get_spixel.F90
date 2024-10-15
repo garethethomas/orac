@@ -247,7 +247,7 @@ subroutine Get_SPixel(Ctrl, SAD_Chan, SAD_LUT, MSI_Data, RTM, SPixel, status)
 #ifdef DEBUG
          write(*, *) 'WARNING: Get_SPixel(): Incorrect particle type in  ' // &
                      'pixel starting at:', SPixel%Loc%X0, SPixel%Loc%Y0
-         write(*,*)  'Type: ',SPixelType
+         write(*,*)  'Type: ', SPixelType
 #endif
          go to 99 ! Skip further data reading
       end if
@@ -390,9 +390,15 @@ subroutine Get_SPixel(Ctrl, SAD_Chan, SAD_LUT, MSI_Data, RTM, SPixel, status)
       status = SPixelSkip
    end if
 
-   ! If stat indicates a "super-pixel fatal" condition set the quality
-   ! control flag bit to indicate no processing.
+   call Set_Limits(Ctrl, SPixel, SAD_LUT, status)
+
+   ! If stat indicates a "super-pixel fatal" condition set the channel
+   ! counts to zero to prevent output of various arrays.
 99 if (status /= 0) then
+      SPixel%Ind%Ny = 0
+      SPixel%Ind%NSolar = 0
+      SPixel%Ind%NThermal = 0
+      SPixel%Ind%NMixed = 0
 #ifdef DEBUG
      write(*,*) 'WARNING: Get_SPixel() error status', status
 #endif

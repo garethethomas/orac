@@ -89,7 +89,7 @@ subroutine prepare_output_primary_pp(i, j, indexing, input_data, output_data, &
    !----------------------------------------------------------------------------
    ! sol_zen, sat_zen, rel_azi
    !----------------------------------------------------------------------------
-   do k=1,indexing%NViews
+   do k = 1, indexing%NViews
       call prepare_float_packed_float( &
            input_data%sat_zen(i,j,k), output_data%sat_zen(i,j,k), &
            output_data%sol_scale, output_data%sol_offset, &
@@ -220,8 +220,8 @@ subroutine prepare_output_primary_pp(i, j, indexing, input_data, output_data, &
       ! rho, rho_uncertainty
       !-------------------------------------------------------------------------
       i_rho = 0
-      do k=1,indexing%NSolar
-         do l=1,MaxRho_XX
+      do k = 1, indexing%NSolar
+         do l = 1, MaxRho_XX
             if (indexing%rho_terms(k,l)) then
                i_rho = i_rho + 1
 
@@ -246,7 +246,7 @@ subroutine prepare_output_primary_pp(i, j, indexing, input_data, output_data, &
 
    if (indexing%flags%do_swansea) then
       i_rho = 0
-      do k=1,indexing%NSolar
+      do k = 1, indexing%NSolar
          if (indexing%ss_terms(k)) then
             i_rho = i_rho + 1
 
@@ -297,7 +297,7 @@ subroutine prepare_output_primary_pp(i, j, indexing, input_data, output_data, &
       !-------------------------------------------------------------------------
       ! swansea_p, swansea_p_uncertainty
       !-------------------------------------------------------------------------
-      do k=1,indexing%NViews
+      do k = 1, indexing%NViews
          call prepare_short_packed_float( &
               input_data%swansea_p(i,j,k), output_data%swansea_p(i,j,k), &
               output_data%swansea_p_scale, output_data%swansea_p_offset, &
@@ -504,7 +504,7 @@ subroutine prepare_output_primary_pp(i, j, indexing, input_data, output_data, &
       !-------------------------------------------------------------------------
       ! cloud_albedo
       !-------------------------------------------------------------------------
-      do k=1,indexing%NSolar
+      do k = 1, indexing%NSolar
          call prepare_short_packed_float( &
               input_data%cloud_albedo(i,j,k), output_data%cloud_albedo(i,j,k), &
               output_data%cloud_albedo_scale, output_data%cloud_albedo_offset, &
@@ -524,7 +524,7 @@ subroutine prepare_output_primary_pp(i, j, indexing, input_data, output_data, &
       !-------------------------------------------------------------------------
       ! cee
       !-------------------------------------------------------------------------
-      do k=1,indexing%NThermal
+      do k = 1, indexing%NThermal
          call prepare_short_packed_float( &
               input_data%cee(i,j,k), output_data%cee(i,j,k), &
               output_data%cee_scale, output_data%cee_offset, &
@@ -544,7 +544,7 @@ subroutine prepare_output_primary_pp(i, j, indexing, input_data, output_data, &
       !-------------------------------------------------------------------------
       ! cccot_pre
       !-------------------------------------------------------------------------
-      do k=1,indexing%NViews
+      do k = 1, indexing%NViews
          call prepare_short_packed_float( &
               input_data%cccot_pre(i,j,k), output_data%cccot_pre(i,j,k), &
               output_data%cccot_pre_scale, output_data%cccot_pre_offset, &
@@ -693,7 +693,7 @@ subroutine prepare_output_primary_pp(i, j, indexing, input_data, output_data, &
    ! ANN phase
    !----------------------------------------------------------------------------
    if (indexing%flags%do_ann_phase) then
-      do k=1,indexing%NViews
+      do k = 1, indexing%NViews
          call prepare_short_packed_float( &
               input_data%cphcot(i,j,k), output_data%cphcot(i,j,k), &
               output_data%cphcot_scale, output_data%cphcot_offset, &
@@ -778,7 +778,7 @@ subroutine prepare_output_primary_pp(i, j, indexing, input_data, output_data, &
       !-------------------------------------------------------------------------
       ! cldmask_uncertainty
       !-------------------------------------------------------------------------
-      do k=1,indexing%NViews
+      do k = 1, indexing%NViews
          call prepare_short_packed_float( &
               input_data%cldmask_uncertainty(i,j,k), &
               output_data%cldmask_uncertainty(i,j,k), &
